@@ -1,147 +1,209 @@
-/**
- * QSE — interaksi halaman ayat: klik kata → fetch 4 lapisan analisis → render panel.
- * Vanilla JS, tanpa build step, sesuai kebutuhan pengecekan cepat.
- */
+/* ============================================================
+   QSE — halaman Ayat (Baca + Jelajah)
+   Klik kata -> fetch /qse/api/word/{id} -> render 4 lapisan
+   di bawah baris terjemahan per-kata. Vanilla JS, tanpa build step.
+   Menegakkan: label SEMENTARA (§18), disclaimer melekat, "Dasar" per
+   lapisan (§12/§18), teks ayat tidak pernah ditulis AI (§12).
+   ============================================================ */
 (function () {
   'use strict';
 
-  const NUM_AR = ['', '\u0661', '\u0662', '\u0663', '\u0664']; // ١ ٢ ٣ ٤
-
-  const VERDICT_LABEL = {
-    sync: 'SYNC', partial: 'PARTIAL', contradicted: 'DITOLAK',
-    insufficient: 'BELUM CUKUP', beyond_scope: 'DI LUAR JANGKAUAN',
-  };
+  const API = (id) => `/qse/api/word/${id}`;
 
   function esc(s) {
-    if (s === null || s === undefined) return '';
-    return String(s).replace(/[&<>"']/g, (c) => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[c]));
   }
 
-  function stampHtml(verdict, extraClass) {
-    if (!verdict) return '';
-    const label = VERDICT_LABEL[verdict] || verdict;
-    return `<span class="verdict-stamp ${esc(verdict)} ${extraClass || ''}">${esc(label)}</span>`;
+  const AR_DIGITS = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  const arNum = (n) => String(n).split('').map((d) => (AR_DIGITS[+d] !== undefined ? AR_DIGITS[+d] : d)).join('');
+
+  const layerHead = (num, title) =>
+    `<div class="wd-head"><span class="layer-num" aria-hidden="true">${arNum(num)}</span>` +
+    `<span class="wd-title">${esc(title)}</span></div>`;
+
+  const dasar = (t) => `<p class="dasar">Dasar: ${esc(t)}</p>`;
+  const disclaimer = (t) => (t ? `<p class="disclaimer">${esc(t)}</p>` : '');
+
+  /* ---- Lapisan 1: Phoneme ---- */
+  function renderPhoneme(l1) {
+    l1 = l1 || {};
+    const letters = l1.letters || [];
+    let chips = letters.map((x) =>
+      `<span class="ph-chip"><span class="ph-letter">${esc(x.letter)}</span>` +
+      `<span class="ph-ipa">${esc(x.ipa || '')}</span></span>`
+    ).join('');
+    if (!chips) chips = '<span class="wd-muted">Tidak ada dekomposisi huruf.</span>';
+    return `<div class="wd-layer">${layerHead(1, 'Phoneme')}` +
+      `<div class="ph-row">${chips}</div>` +
+      disclaimer(l1.disclaimer) +
+      dasar('tabel fonem QSE (makhraj & sifat) — deterministik, §5.') +
+      `</div>`;
   }
 
-  function layerHeader(n, title) {
-    return `<div class="layer-head">
-      <span class="layer-num">${NUM_AR[n]}</span>
-      <span class="layer-title">${esc(title)}</span>
-    </div>`;
-  }
-
-  function renderPhonemes(letters) {
-    if (!letters || !letters.length) return '<p class="disclaimer">Tidak ada data fonetik.</p>';
-    return '<div class="phoneme-row">' + letters.map((l) => `
-      <span class="phoneme-chip">${esc(l.letter)}<small>${esc(l.ipa)}</small></span>
-    `).join('') + '</div>';
-  }
-
-  function renderRoot(layer2) {
-    if (!layer2 || !layer2.root) {
-      return `<p class="disclaimer">${esc(layer2 && layer2.note || 'Tidak ada root.')}</p>`;
-    }
-    const r = layer2.root;
-    let html = `
-      <div class="root-arabic">${esc(r.arabic)}</div>
-      <div class="root-translit">${esc(r.transliteration)} · ${layer2.occurrences_total} kemunculan</div>
-    `;
-    if (r.base_meaning) html += `<p style="margin:0.5rem 0 0;font-size:0.85rem;">${esc(r.base_meaning)}</p>`;
-    if (layer2.proto_semitic) {
-      const ps = layer2.proto_semitic;
-      html += `<div class="ps-note">
-        <strong>${esc(ps.form || '')}</strong> — ${esc(ps.meaning || '')}
-        <br>${esc(ps.status)}
-      </div>`;
-    }
-    return html;
-  }
-
-  function renderVerses(layer3) {
-    if (layer3.note && !layer3.same_root) {
-      return `<p class="disclaimer">${esc(layer3.note)}</p>`;
-    }
-    let html = `<p class="verse-count">Se-root: ${layer3.same_root.total} ayat`;
-    if (layer3.semantic_field) html += ` · Semantic field: ${layer3.semantic_field.total}`;
-    if (layer3.narrative) html += ` · Naratif: ${layer3.narrative.total}`;
-    html += '</p>';
-
-    if (layer3.statistics && layer3.statistics.collocations && layer3.statistics.collocations.length) {
-      html += '<div style="margin-top:0.6rem;">';
-      layer3.statistics.collocations.slice(0, 5).forEach((c) => {
-        html += `<div class="stat-row">
-          <span>${esc(c.partner)} (${c.n_ab}×, ${c.ratio ? c.ratio + '×' : '–'})</span>
-          <span class="g2">G²=${c.g2}</span>
-        </div>`;
-      });
-      html += `</div><p class="disclaimer">${esc(layer3.statistics.status_epistemik)}</p>`;
+  /* ---- Lapisan 2: Root — Proto-Semitik ---- */
+  function renderRoot(l2) {
+    l2 = l2 || {};
+    let body, basis = 'morfologi QAC (deterministik).';
+    if (l2.root) {
+      const r = l2.root;
+      body = `<p class="wd-line"><span class="wd-ar">${esc(r.arabic)}</span> ` +
+        `<span class="wd-mono">${esc(r.transliteration || '')}</span>` +
+        (r.base_meaning ? ` — ${esc(r.base_meaning)}` : '') + `</p>`;
+      if (l2.proto_semitic) {
+        const p = l2.proto_semitic;
+        body += `<p class="wd-line wd-sub">Proto-Semitik <span class="wd-mono">${esc(p.form || '')}</span>` +
+          (p.meaning ? ` — ${esc(p.meaning)}` : '') + `</p>`;
+        body += `<span class="wd-badge proto">${esc(p.status || 'HIPOTESIS AKADEMIK — pra-Qur\'ani')}</span>`;
+        if (p.source) basis += ` Proto-Semitik: ${p.source}, status hipotesis.`;
+      }
     } else {
-      html += '<p class="disclaimer">Belum ada statistik kolokasi (Tier 0) untuk root ini.</p>';
+      body = `<p class="wd-muted">${esc(l2.note || 'Kata ini partikel / tanpa root pada tagging sumber.')}</p>`;
     }
-    html += `<p class="disclaimer">${esc(layer3.disclaimer || '')}</p>`;
-    return html;
+    return `<div class="wd-layer">${layerHead(2, 'Root — Proto-Semitik')}${body}${dasar(basis)}</div>`;
   }
 
-  function renderAnalysis(layer4) {
-    if (layer4.status === 'BELUM DIGENERATE') {
-      return `<p class="disclaimer">${esc(layer4.note)}</p>`;
+  /* ---- Lapisan 3: Ayat Terkait + statistik Tier 0 ---- */
+  function renderVerses(l3) {
+    l3 = l3 || {};
+    const sameRoot = l3.same_root || {};
+    let html = `<div class="wd-layer">${layerHead(3, 'Ayat Terkait')}`;
+
+    if (sameRoot.total != null) {
+      const preview = (sameRoot.preview || [])
+        .map((v) => esc(v.ref || v)).slice(0, 6).join(' · ');
+      html += `<p class="wd-line">Se-root: <strong>${esc(sameRoot.total)} kemunculan</strong>` +
+        (preview ? ` · <span class="wd-mono">${preview}</span>` : '') + `</p>`;
     }
-    let html = `<span class="analysis-label">${esc(layer4.label)}</span>`;
-    html += stampHtml(layer4.verdict);
-    html += `<div style="margin-top:0.8rem;font-size:0.85rem;white-space:pre-wrap;">${esc(
-      typeof layer4.content === 'string' ? layer4.content : JSON.stringify(layer4.content, null, 2)
-    )}</div>`;
-    html += `<p class="disclaimer">${esc(layer4.disclaimer)}</p>`;
-    html += `<p style="font-family:var(--font-mono);font-size:0.65rem;color:var(--ink-faint);margin-top:0.5rem;">
-      model: ${esc(layer4.model_version)} · digenerate: ${esc(layer4.generated_at)}
-    </p>`;
-    return html;
+
+    const stats = l3.statistics || {};
+    const colls = stats.collocations || [];
+    if (colls.length) {
+      html += '<div class="colloc">';
+      colls.slice(0, 5).forEach((c) => {
+        html += `<div class="colloc-row"><span class="cp">${esc(c.partner)}</span>` +
+          `<span class="wd-mono">n=${esc(c.n_ab)} · ${c.ratio != null ? esc(c.ratio) + '×' : '–'} · G²=${esc(c.g2)}</span></div>`;
+      });
+      html += '</div>';
+      html += disclaimer(stats.status_epistemik);
+    } else {
+      html += `<div class="wd-empty">` +
+        `<p class="wd-empty-label">Statistik kolokasi (Tier 0) — belum tersedia</p>` +
+        `<p class="wd-empty-body">Menunggu perhitungan PMI &amp; G² pada build korpus. ` +
+        `Belum dihitung — bukan berarti polanya tidak ada.</p></div>`;
+    }
+
+    html += disclaimer(l3.disclaimer);
+    html += dasar('query root_id di DB (deterministik) · angka kolokasi = pola penggunaan, bukan makna (§14).');
+    return html + `</div>`;
   }
 
-  async function loadWord(wordId, panelEl) {
-    panelEl.innerHTML = '<p class="placeholder">Memuat analisis…</p>';
+  /* ---- Verdict stamp (§8) ---- */
+  const VERDICTS = {
+    sync: 'SYNC', partial: 'PARTIAL', contradicted: 'CONTRADICTED',
+    insufficient: 'INSUFFICIENT', beyond_scope: 'BEYOND SCOPE'
+  };
+  function stamp(v) {
+    if (!v) return '';
+    const key = String(v).toLowerCase();
+    return `<span class="wd-stamp ${esc(key)}">${esc(VERDICTS[key] || String(v).toUpperCase())}</span>`;
+  }
+
+  /* ---- Lapisan 4: Hasil Analisa Sementara (Tier 1 cache) ---- */
+  function renderAnalysis(l4) {
+    l4 = l4 || {};
+    let html = `<div class="wd-layer">${layerHead(4, 'Hasil Analisa Sementara')}`;
+
+    if (l4.status === 'TERSEDIA') {
+      html += `<span class="analysis-label">${esc(l4.label || 'HASIL ANALISA SEMENTARA')}</span>`;
+      html += stamp(l4.verdict);
+      const content = typeof l4.content === 'string' ? l4.content : JSON.stringify(l4.content, null, 2);
+      html += `<div class="wd-content">${esc(content)}</div>`;
+      html += disclaimer(l4.disclaimer);
+      const n = Array.isArray(l4.input_ayah_ids) ? l4.input_ayah_ids.length : '—';
+      html += dasar(`${n} ayat input · model ${esc(l4.model_version || '—')} · digenerate ${esc(l4.generated_at || '—')} — ` +
+        `berlabel SEMENTARA; teks ayat di-resolve dari DB, bukan ditulis AI (§12).`);
+    } else {
+      html += `<div class="wd-empty dashed">` +
+        `<p class="wd-empty-label">BELUM DIGENERATE</p>` +
+        `<p class="wd-empty-body">${esc(l4.note ||
+          'Analisis AI (Tier 2) hanya dijalankan admin/kurator. Permintaan pengguna tidak memicu AI — kondisi wajar, bukan kesalahan.')}</p></div>`;
+      html += dasar('saat tersedia: daftar ID ayat input + versi model, semua berlabel SEMENTARA (§10, §12).');
+    }
+    return html + `</div>`;
+  }
+
+  function renderWord(data) {
+    const w = data.word || {};
+    const meta = `<div class="wd-meta"><span class="wd-ar-lg">${esc(w.form)}</span>` +
+      `<span class="wd-mono">${esc(w.ref || '')}` +
+      `${w.qac_location ? ' · ' + esc(w.qac_location) : ''}` +
+      `${w.pos ? ' · ' + esc(w.pos) : ''}</span></div>`;
+    return meta +
+      renderPhoneme(data.layer1_phoneme) +
+      renderRoot(data.layer2_root) +
+      renderVerses(data.layer3_verses) +
+      renderAnalysis(data.layer4_analysis);
+  }
+
+  function setActive(wordId) {
+    document.querySelectorAll('.qword.active, .wordgloss.active')
+      .forEach((el) => el.classList.remove('active'));
+    document.querySelectorAll('.qword[data-word-id="' + wordId + '"], .wordgloss[data-word-id="' + wordId + '"]')
+      .forEach((el) => el.classList.add('active'));
+  }
+
+  async function loadWord(wordId, panel) {
+    setActive(wordId);
+    panel.innerHTML = '<p class="placeholder">Memuat analisis…</p>';
     try {
-      const res = await fetch(`/qse/api/word/${wordId}`);
+      const res = await fetch(API(wordId), { headers: { Accept: 'application/json' } });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
-
-      panelEl.innerHTML = `
-        <div class="layer">
-          ${layerHeader(1, 'Phoneme')}
-          <div class="layer-body">${renderPhonemes(data.layer1_phoneme.letters)}
-            <p class="disclaimer">${esc(data.layer1_phoneme.disclaimer)}</p>
-          </div>
-        </div>
-        <div class="layer">
-          ${layerHeader(2, 'Root — Proto-Semitik')}
-          <div class="layer-body">${renderRoot(data.layer2_root)}</div>
-        </div>
-        <div class="layer">
-          ${layerHeader(3, 'Ayat Terkait')}
-          <div class="layer-body">${renderVerses(data.layer3_verses)}</div>
-        </div>
-        <div class="layer">
-          ${layerHeader(4, 'Hasil Analisa Sementara')}
-          <div class="layer-body">${renderAnalysis(data.layer4_analysis)}</div>
-        </div>
-      `;
+      panel.innerHTML = renderWord(data);
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } catch (err) {
-      panelEl.innerHTML = `<p class="disclaimer">Gagal memuat analisis: ${esc(err.message)}</p>`;
+      panel.innerHTML = '<div class="wd-empty"><p class="wd-empty-label">Gagal memuat</p>' +
+        '<p class="wd-empty-body">' + esc(err.message) + '. Coba ketuk kata itu lagi.</p></div>';
     }
+  }
+
+  function initTajwid() {
+    const btn = document.getElementById('tajwid-toggle');
+    const text = document.getElementById('mushaf-text');
+    if (!btn || !text) return;
+    const legend = document.getElementById('tajwid-legend');
+    const caption = document.getElementById('tajwid-caption');
+    const state = btn.querySelector('.state');
+    btn.addEventListener('click', () => {
+      const on = text.classList.toggle('tajwid-on');
+      btn.setAttribute('aria-pressed', String(on));
+      if (state) state.textContent = on ? 'warna' : 'polos';
+      if (legend) legend.hidden = !on;
+      if (caption) caption.hidden = !on;
+    });
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    const panel = document.getElementById('marginalia-panel');
+    const panel = document.getElementById('word-detail');
     if (!panel) return;
 
-    document.querySelectorAll('.qword').forEach((el) => {
-      el.addEventListener('click', () => {
-        document.querySelectorAll('.qword.active').forEach((a) => a.classList.remove('active'));
-        el.classList.add('active');
-        loadWord(el.dataset.wordId, panel);
-      });
+    const select = (el) => {
+      const id = el.getAttribute('data-word-id');
+      if (id) loadWord(id, panel);
+    };
+
+    document.querySelectorAll('.qword[data-word-id], .wordgloss[data-word-id]').forEach((el) => {
+      el.addEventListener('click', () => select(el));
+      // <button> menangani Enter/Space secara native; hanya span (.qword) yang perlu ditambah.
+      if (el.tagName !== 'BUTTON') {
+        el.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(el); }
+        });
+      }
     });
+
+    initTajwid();
   });
 })();
