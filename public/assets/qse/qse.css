@@ -1,0 +1,401 @@
+/* ============================================================
+   QSE — Quran Semantic Explorer
+   Konsep visual: "Marginalia" — naskah beranotasi tepi.
+   Teks mushaf di tengah; analisis muncul sebagai catatan pinggir.
+   ============================================================ */
+
+:root {
+  /* ---- Warna ---- */
+  --paper:        #EDE6D6;
+  --paper-panel:  #E3DBC7;
+  --ink:          #1F2A24;
+  --ink-soft:     #4A554D;
+  --ink-faint:    #7C8579;
+  --gold:         #A8823C;   /* muhkamat / anchor */
+  --rose:         #8B4A3D;   /* mutasyabihat */
+  --rule:         #C9BFA8;
+  --rule-strong:  #B5A98A;
+
+  --verdict-sync:          #3F6E52;
+  --verdict-partial:       #A8823C;
+  --verdict-contradicted:  #9C3D3D;
+  --verdict-insufficient:  #6B6558;
+  --verdict-beyond:        #5B5470;
+
+  /* ---- Tipografi ---- */
+  --font-arabic:  'Amiri', 'Traditional Arabic', serif;
+  --font-display: 'Lora', serif;
+  --font-body:    'Source Serif 4', serif;
+  --font-mono:    'JetBrains Mono', monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; }
+
+/* ---- Header ---- */
+.site-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--rule-strong);
+  background: linear-gradient(to bottom, var(--paper) 92%, transparent);
+}
+
+.site-header .brand {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+}
+
+.site-header .brand small {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 0.2rem;
+}
+
+.site-nav { display: flex; gap: 1.5rem; font-family: var(--font-mono); font-size: 0.8rem; }
+.site-nav a { text-decoration: none; color: var(--ink-soft); border-bottom: 1px solid transparent; }
+.site-nav a:hover, .site-nav a.active { color: var(--ink); border-bottom-color: var(--gold); }
+
+main { max-width: 1100px; margin: 0 auto; padding: 2.5rem 2rem 6rem; }
+
+/* ---- Eyebrow / label struktural ---- */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 0.5rem;
+}
+
+h1.page-title {
+  font-family: var(--font-display);
+  font-size: 2.1rem;
+  font-weight: 600;
+  margin: 0 0 1.5rem;
+}
+
+/* ---- Grid surah (beranda) ---- */
+.surah-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+}
+
+.surah-card {
+  background: var(--paper);
+  padding: 1.1rem 1.2rem;
+  text-decoration: none;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  transition: background 0.15s ease;
+}
+.surah-card:hover { background: var(--paper-panel); }
+
+.surah-card .num {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+}
+.surah-card .translit {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.surah-card .arabic-name {
+  font-family: var(--font-arabic);
+  font-size: 1.3rem;
+  color: var(--ink-soft);
+}
+.surah-card .meta {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ---- Daftar ayat dalam surah ---- */
+.ayah-list { border-top: 1px solid var(--rule); }
+.ayah-row {
+  display: flex;
+  gap: 1.2rem;
+  align-items: baseline;
+  padding: 1rem 0.25rem;
+  border-bottom: 1px solid var(--rule);
+  text-decoration: none;
+  color: var(--ink);
+}
+.ayah-row:hover { background: var(--paper-panel); }
+.ayah-row .ayah-num {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  min-width: 2.5rem;
+}
+.ayah-row .ayah-preview {
+  font-family: var(--font-arabic);
+  font-size: 1.4rem;
+  direction: rtl;
+  flex: 1;
+}
+
+/* ---- Halaman ayat (mushaf + panel) ---- */
+.ayah-stage {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+@media (min-width: 960px) {
+  .ayah-stage { grid-template-columns: 1.4fr 1fr; align-items: start; }
+}
+
+.mushaf {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 3rem 2.5rem;
+  position: relative;
+}
+.mushaf::before {
+  /* tepi bertakik halus — sentuhan naskah, dipakai tunggal (bukan tiap kartu) */
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border: 1px solid var(--rule);
+  pointer-events: none;
+}
+
+.mushaf .ref-badge {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+  margin-bottom: 1.2rem;
+  display: block;
+}
+
+.mushaf-text {
+  direction: rtl;
+  font-family: var(--font-arabic);
+  font-size: 2.3rem;
+  line-height: 2.6;
+  text-align: justify;
+}
+
+.mushaf-text .qword {
+  cursor: pointer;
+  padding: 0.05em 0.12em;
+  border-radius: 3px;
+  transition: background 0.12s ease;
+}
+.mushaf-text .qword:hover { background: rgba(168, 130, 60, 0.18); }
+.mushaf-text .qword.active { background: rgba(168, 130, 60, 0.32); }
+
+.classification-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 1.3rem;
+  color: var(--ink-faint);
+}
+.classification-tag .dot { width: 7px; height: 7px; border-radius: 50%; }
+.classification-tag.muhkamat .dot { background: var(--gold); }
+.classification-tag.mutasyabihat .dot { background: var(--rose); }
+
+/* ---- Panel marginalia (analisis 4 lapis) ---- */
+.marginalia {
+  background: var(--paper-panel);
+  border: 1px solid var(--rule);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+  padding: 1.8rem 1.6rem;
+  min-height: 200px;
+}
+
+.marginalia .placeholder {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+.layer {
+  border-bottom: 1px solid var(--rule);
+  padding: 1.1rem 0;
+}
+.layer:first-child { padding-top: 0; }
+.layer:last-child { border-bottom: none; padding-bottom: 0; }
+
+.layer-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+.layer-num {
+  font-family: var(--font-arabic);
+  font-size: 1rem;
+  color: var(--gold);
+  min-width: 1.4rem;
+}
+.layer-title {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.layer-body { font-size: 0.92rem; color: var(--ink); }
+.layer-body .disclaimer {
+  font-style: italic;
+  color: var(--ink-faint);
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  border-left: 2px solid var(--rose);
+  padding-left: 0.6rem;
+}
+
+.phoneme-row { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+.phoneme-chip {
+  font-family: var(--font-arabic);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  padding: 0.15rem 0.55rem;
+  border-radius: 3px;
+  font-size: 1.1rem;
+}
+.phoneme-chip small {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--ink-faint);
+  text-align: center;
+}
+
+.root-arabic { font-family: var(--font-arabic); font-size: 1.4rem; }
+.root-translit { font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink-faint); }
+
+.ps-note {
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  background: rgba(139, 74, 61, 0.08);
+  border-left: 2px solid var(--rose);
+  padding: 0.5rem 0.7rem;
+  color: var(--ink-soft);
+}
+
+.verse-count {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  margin: 0.3rem 0 0.6rem;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px dotted var(--rule);
+}
+.stat-row .g2 { color: var(--gold); font-weight: 600; }
+
+/* ---- Stempel verdict — signature element ---- */
+.verdict-stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  width: 4.2rem;
+  height: 4.2rem;
+  text-align: center;
+  transform: rotate(-6deg);
+  padding: 0.3rem;
+  line-height: 1.15;
+}
+.verdict-stamp.sync          { color: var(--verdict-sync); }
+.verdict-stamp.partial       { color: var(--verdict-partial); }
+.verdict-stamp.contradicted  { color: var(--verdict-contradicted); }
+.verdict-stamp.insufficient  { color: var(--verdict-insufficient); }
+.verdict-stamp.beyond_scope  { color: var(--verdict-beyond); }
+
+.analysis-label {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0.2rem 0.6rem;
+  border-radius: 2px;
+  margin-bottom: 0.6rem;
+}
+
+/* ---- Jurnal hipotesis ---- */
+.hyp-list { display: flex; flex-direction: column; gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+.hyp-card { background: var(--paper); padding: 1.3rem 1.4rem; display: flex; gap: 1.2rem; align-items: flex-start; text-decoration: none; color: var(--ink); }
+.hyp-card:hover { background: var(--paper-panel); }
+.hyp-card .stamp-mini {
+  width: 3rem; height: 3rem; font-size: 0.5rem; flex-shrink: 0;
+}
+.hyp-card .body { flex: 1; }
+.hyp-card .statement { font-family: var(--font-body); font-size: 0.95rem; margin-bottom: 0.3rem; }
+.hyp-card .meta { font-family: var(--font-mono); font-size: 0.7rem; color: var(--ink-faint); }
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+/* ---- Utilitas ---- */
+.skip-link {
+  position: absolute; left: -9999px; top: 0;
+  background: var(--ink); color: var(--paper); padding: 0.6rem 1rem; z-index: 100;
+}
+.skip-link:focus { left: 1rem; top: 1rem; }
+
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; scroll-behavior: auto !important; }
+}
