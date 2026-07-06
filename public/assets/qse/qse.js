@@ -185,7 +185,32 @@
     });
   }
 
+  /* ---- Toggle tema: Modern (default) <-> Manuskrip ----
+     Hanya bahasa visual yang berubah (lihat qse-theme.css). Label
+     epistemik, disclaimer, baris "Dasar", dan lima verdict tidak
+     terpengaruh oleh tema mana pun. */
+  function initThemeToggle() {
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+    const state = btn.querySelector('.state');
+    const current = () => (document.documentElement.getAttribute('data-theme') === 'manuscript' ? 'manuscript' : 'modern');
+    const apply = (theme) => {
+      if (theme === 'manuscript') {
+        document.documentElement.setAttribute('data-theme', 'manuscript');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+      }
+      if (state) state.textContent = theme === 'manuscript' ? 'Manuskrip' : 'Modern';
+      btn.setAttribute('aria-pressed', String(theme === 'manuscript'));
+      try { localStorage.setItem('qse-theme', theme); } catch (e) {}
+    };
+    apply(current()); // sinkronkan label tombol dengan atribut yang sudah di-set inline script
+    btn.addEventListener('click', () => apply(current() === 'manuscript' ? 'modern' : 'manuscript'));
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
+    initThemeToggle();
+
     const panel = document.getElementById('word-detail');
     if (!panel) return;
 

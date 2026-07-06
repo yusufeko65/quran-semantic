@@ -561,3 +561,70 @@ h1.page-title {
   .wordgloss, .qword, .tajwid-toggle { transition: none; }
   .wd-stamp { transform: none; }
 }
+
+/* ============================================================
+   QSE — Patch Desain #2  [TAMBAHKAN DI AKHIR qse.css, setelah patch tajwid]
+   Menegakkan 3 temuan backlog: kontras kertas, motion bermakna
+   pada stempel verdict, skala tipografi lebih berani di titik kunci.
+   Tidak menghapus/memperhalus label atau disclaimer epistemik apa pun.
+   ============================================================ */
+
+/* ---- 1. Kontras kertas dinaikkan + kedalaman lembut ----
+   Sebelumnya --paper vs --paper-panel hanya beda tipis (flat).
+   Di sini panel-panel utama diberi shadow halus supaya "mengambang"
+   dari latar, bukan menyatu. Warna token TIDAK diubah (hindari
+   regresi di tempat lain) — cukup tambahan shadow + border sedikit
+   lebih gelap pada kontainer yang memang berperan sebagai "kartu". */
+.mushaf,
+.word-detail,
+.ayah-translation,
+.wordgloss-section,
+.surah-card,
+.hyp-card {
+  box-shadow: 0 1px 2px rgba(31, 42, 36, 0.05), 0 3px 10px rgba(31, 42, 36, 0.07);
+}
+.mushaf, .word-detail { border-color: var(--rule-strong); }
+
+/* ---- 2. Motion bermakna: stempel verdict "dihentakkan" ----
+   Satu-satunya animasi dekoratif yang disengaja di seluruh app,
+   ditaruh di signature element. Berjalan sekali saat elemen
+   pertama render (bukan loop, bukan hover-bounce). */
+@keyframes qse-stamp-in {
+  0%   { opacity: 0; transform: scale(1.6) rotate(-10deg); }
+  60%  { opacity: 1; transform: scale(0.94) rotate(-1.5deg); }
+  100% { opacity: 1; transform: scale(1) rotate(-1.5deg); }
+}
+.wd-stamp,
+.verdict-stamp {
+  animation: qse-stamp-in 0.36s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wd-stamp, .verdict-stamp { animation: none; }
+}
+
+/* ---- 3. Skala tipografi lebih berani di titik kunci ----
+   Penomoran Arab-Indic (١٢٣٤): dibesarkan + lingkaran lebih tebal,
+   karena urutannya bermakna (§5) — layak ditonjolkan, bukan disamakan
+   dengan elemen mono lain. Kata mushaf yang sedang dipilih (.active)
+   juga dibesarkan sedikit agar jelas ini adalah fokus saat ini. */
+.layer-num {
+  width: 32px;
+  height: 32px;
+  font-size: 1.3rem;
+  border-width: 1.5px;
+}
+.wd-title {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+}
+
+.qword.active {
+  color: var(--gold);
+  text-decoration-line: underline;
+  text-decoration-color: var(--gold);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+.mushaf-text .qword {
+  transition: color 0.15s ease;
+}

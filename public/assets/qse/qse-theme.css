@@ -1,0 +1,243 @@
+/* ============================================================
+   QSE — Sistem Tema  [MUAT SETELAH qse.css DAN qse-patch-2.css]
+   Default = Modern/Clean. Manuskrip = tema alternatif via toggle,
+   diaktifkan dengan atribut html[data-theme="manuscript"].
+
+   PRINSIP: hanya bahasa visual (warna, radius, tipografi, motion,
+   bentuk kartu/stempel) yang berbeda antar tema. Label epistemik
+   ("HASIL ANALISA SEMENTARA"), disclaimer per lapisan, baris "Dasar",
+   lima status verdict, dan pemisahan warna tajwid↔epistemik TIDAK
+   berubah/berkurang di tema mana pun (§18) — ini pagar, bukan gaya.
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   A. TOKEN MODERN (default) — menimpa nilai manuskrip di qse.css
+   Nama variable SAMA dengan yang sudah dipakai di seluruh komponen,
+   supaya tidak perlu menulis ulang komponen manapun.
+   ------------------------------------------------------------ */
+:root {
+  --paper:        #FAFAF9;
+  --paper-panel:  #FFFFFF;
+  --ink:          #18181B;
+  --ink-soft:     #3F3F46;
+  --ink-faint:    #A1A1AA;
+  --gold:         #4F46E5;  /* aksen muhkamat/interaksi — indigo di tema modern */
+  --rose:         #DC2626;  /* aksen mutasyabihat — merah di tema modern */
+  --rule:         #E4E4E7;
+  --rule-strong:  #D4D4D8;
+
+  --verdict-sync:          #059669;
+  --verdict-partial:       #B45309;
+  --verdict-contradicted:  #DC2626;
+  --verdict-insufficient:  #71717A;
+  --verdict-beyond:        #7C3AED;
+
+  --font-arabic:  'Amiri', 'Traditional Arabic', serif; /* tetap sama di semua tema — identitas mushaf */
+  --font-display: 'Inter', sans-serif;
+  --font-body:    'Inter', sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+}
+
+/* ------------------------------------------------------------
+   B. STRUKTUR/DEKORASI MODERN (default) — bentuk kartu, stempel,
+   header, grid — bagian yang tak bisa direskin lewat variable saja.
+   ------------------------------------------------------------ */
+
+/* Header: flat, bukan gradasi kertas */
+.site-header {
+  background: var(--paper-panel);
+  border-bottom: 1px solid var(--rule);
+}
+.site-nav a.active,
+.site-nav a:hover { border-bottom-color: var(--gold); }
+
+/* Kartu utama: sudut membulat, tanpa lipatan sudut manuskrip */
+.mushaf,
+.word-detail {
+  clip-path: none;
+  border-radius: 16px;
+}
+.surah-card,
+.hyp-card,
+.mushaf,
+.word-detail,
+.ayah-translation,
+.wordgloss-section {
+  border-radius: 14px;
+}
+
+/* Grid surah & daftar ayat: kartu berjarak, bukan hairline menyatu */
+.surah-grid {
+  gap: 12px;
+  background: transparent;
+  border: none;
+}
+.surah-card { border: 1px solid var(--rule); }
+
+.ayah-list { border-top: none; }
+.ayah-row {
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  padding: 0.9rem 1rem;
+}
+
+/* Jurnal hipotesis: kartu terpisah, bukan list hairline */
+.hyp-list { background: transparent; border: none; gap: 10px; }
+.hyp-card { border: 1px solid var(--rule); }
+
+/* Badge/label: pil, bukan blok tegas ala cap */
+.analysis-label {
+  background: var(--gold);
+  color: #FFFFFF;
+  border-radius: 999px;
+  opacity: 0.92;
+}
+.classification-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--gold) 12%, var(--paper-panel));
+  border: none;
+  padding: 0.25rem 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+}
+.classification-tag .dot { background: var(--gold); }
+
+/* Stempel verdict: chip pil datar berwarna, bukan cap tinta berotasi */
+.wd-stamp,
+.verdict-stamp {
+  border: none;
+  border-radius: 999px;
+  transform: none;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  padding: 0.25rem 0.65rem;
+  animation: qse-stamp-in-modern 0.3s ease both;
+}
+@keyframes qse-stamp-in-modern {
+  0%   { opacity: 0; transform: translateY(3px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Toggle & badge kecil lain: pil konsisten */
+.tajwid-toggle { border-radius: 999px; }
+.wordgloss.active { border-radius: 10px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wd-stamp, .verdict-stamp { animation: none; }
+}
+
+/* Tombol toggle tema (di nav header) — bentuk dasar sama di kedua tema;
+   warna & radius ikut variable + blok B/C di atas/bawah. */
+.theme-toggle {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+}
+.theme-toggle:hover { background: var(--paper-panel); }
+.theme-toggle:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.theme-toggle .state { color: var(--gold); font-weight: 600; }
+
+/* ------------------------------------------------------------
+   C. TEMA MANUSKRIP (alternatif) — dipulihkan persis seperti semula
+   saat html[data-theme="manuscript"] aktif. Tidak ada yang hilang,
+   hanya tidak default lagi.
+   ------------------------------------------------------------ */
+html[data-theme="manuscript"] {
+  --paper:        #EDE6D6;
+  --paper-panel:  #E3DBC7;
+  --ink:          #1F2A24;
+  --ink-soft:     #4A554D;
+  --ink-faint:    #7C8579;
+  --gold:         #A8823C;
+  --rose:         #8B4A3D;
+  --rule:         #C9BFA8;
+  --rule-strong:  #B5A98A;
+
+  --verdict-sync:          #3F6E52;
+  --verdict-partial:       #A8823C;
+  --verdict-contradicted:  #9C3D3D;
+  --verdict-insufficient:  #6B6558;
+  --verdict-beyond:        #5B5470;
+
+  --font-display: 'Lora', serif;
+  --font-body:    'Source Serif 4', serif;
+}
+
+html[data-theme="manuscript"] .site-header {
+  background: linear-gradient(to bottom, var(--paper) 92%, transparent);
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+html[data-theme="manuscript"] .mushaf,
+html[data-theme="manuscript"] .word-detail {
+  border-radius: 0;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+html[data-theme="manuscript"] .surah-card,
+html[data-theme="manuscript"] .hyp-card,
+html[data-theme="manuscript"] .ayah-translation,
+html[data-theme="manuscript"] .wordgloss-section {
+  border-radius: 2px;
+}
+
+html[data-theme="manuscript"] .surah-grid {
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+}
+html[data-theme="manuscript"] .surah-card { border: none; }
+
+html[data-theme="manuscript"] .ayah-list { border-top: 1px solid var(--rule); }
+html[data-theme="manuscript"] .ayah-row {
+  border: none;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  margin-bottom: 0;
+  padding: 1rem 0.25rem;
+}
+
+html[data-theme="manuscript"] .hyp-list {
+  background: var(--rule); border: 1px solid var(--rule); gap: 1px;
+}
+html[data-theme="manuscript"] .hyp-card { border: none; }
+
+html[data-theme="manuscript"] .analysis-label {
+  background: var(--ink); color: var(--paper);
+  border-radius: 2px; opacity: 1;
+}
+html[data-theme="manuscript"] .classification-tag {
+  display: block; background: none; border-radius: 0;
+  padding: 0; font-size: 0.72rem;
+}
+html[data-theme="manuscript"] .classification-tag .dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+}
+
+html[data-theme="manuscript"] .wd-stamp,
+html[data-theme="manuscript"] .verdict-stamp {
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+  background: none;
+  transform: rotate(-1.5deg);
+  animation: qse-stamp-in 0.36s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+@keyframes qse-stamp-in {
+  0%   { opacity: 0; transform: scale(1.6) rotate(-10deg); }
+  60%  { opacity: 1; transform: scale(0.94) rotate(-1.5deg); }
+  100% { opacity: 1; transform: scale(1) rotate(-1.5deg); }
+}
+html[data-theme="manuscript"] .tajwid-toggle { border-radius: 2px; }
+html[data-theme="manuscript"] .wordgloss.active { border-radius: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="manuscript"] .wd-stamp,
+  html[data-theme="manuscript"] .verdict-stamp { animation: none; }
+}
