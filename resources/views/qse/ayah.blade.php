@@ -37,7 +37,14 @@
                 @foreach ($ayah->words as $w)
                     <span class="qword" data-word-id="{{ $w->id }}" tabindex="0" role="button"
                           aria-label="Kata ke-{{ $w->position_in_ayah ?? '' }}: buka detail linguistik"
-                    >@if (!empty($w->tajweed_segments ?? null))@foreach ($w->tajweed_segments as $seg)<span class="tj-{{ $seg['rule'] ?? 'none' }}">{{ $seg['text'] ?? '' }}</span>@endforeach@else{{ $w->text_uthmani }}@endif</span>
+                    >@if (!empty($w->tajweed_segments ?? null))
+                        @foreach ($w->tajweed_segments as $seg)
+                            <span class="tj-{{ $seg['rule'] ?? 'none' }}">{{ $seg['text'] ?? '' }}</span>
+                        @endforeach
+                    @else
+                        {{ $w->text_uthmani }}
+                    @endif
+                        </span>
                 @endforeach
             </div>
 

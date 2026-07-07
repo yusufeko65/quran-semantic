@@ -7,6 +7,10 @@ return [
     // Deklarasi qira'at (Manifest §13) — ditampilkan di UI dan disertakan di export
     'qiraat' => 'Hafs \'an \'Ashim',
 
+    // Bahasa default terjemahan & gloss (handoff #2-#3)
+    'translation_lang' => 'id',
+    'gloss_lang' => 'en',
+
     // Batas preview per lapis retrieval pada halaman kata
     'preview_limit' => 20,
 

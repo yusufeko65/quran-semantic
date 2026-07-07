@@ -15,5 +15,7 @@ class Word extends Model
     protected $casts = ['morph_features' => 'array', 'segments' => 'array'];
 
     public function ayah(): BelongsTo { return $this->belongsTo(Ayah::class); }
+    public function glosses(): HasMany { return $this->hasMany(WordGloss::class); }
+
     public function root(): BelongsTo { return $this->belongsTo(Root::class); }
 }

@@ -30,6 +30,7 @@
         <nav class="site-nav">
             <a href="{{ route('qse.page.home') }}" class="{{ request()->routeIs('qse.page.home') ? 'active' : '' }}">Surah</a>
             <a href="{{ route('qse.page.hypotheses') }}" class="{{ request()->routeIs('qse.page.hypotheses') ? 'active' : '' }}">Jurnal Hipotesis</a>
+            <a href="{{ route('qse.page.metodologi') }}" class="{{ request()->routeIs('qse.page.metodologi') ? 'active' : '' }}">Panduan Metodologi</a>
             <button type="button" id="theme-toggle" class="theme-toggle" aria-pressed="false">
                 Tampilan: <span class="state">Modern</span>
             </button>

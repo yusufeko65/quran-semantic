@@ -11,9 +11,12 @@ class Ayah extends Model
 {
     protected $table = 'ayahs';
     public $timestamps = false;
-    protected $fillable = ['surah_id','number_in_surah','text_uthmani','text_imlaei','text_normalized','data_source_id'];
+    protected $fillable = ['surah_id','number_in_surah','text_uthmani','text_imlaei','text_normalized','text_tajweed','data_source_id'];
+    protected $casts = ['text_tajweed' => 'array'];
 
     public function surah(): BelongsTo { return $this->belongsTo(Surah::class); }
+    public function translations(): HasMany { return $this->hasMany(Translation::class); }
+
     public function words(): HasMany { return $this->hasMany(Word::class)->orderBy('position_in_ayah'); }
     public function classifications(): HasMany { return $this->hasMany(AyahClassification::class); }
 
