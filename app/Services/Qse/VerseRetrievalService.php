@@ -102,45 +102,72 @@ class VerseRetrievalService
     }
 
     /**
-     * Statistik Tier 0 (§14) untuk sebuah item — kolokasi terkuat + dispersi.
-     * PMI & G² dikembalikan berdampingan (aturan §14).
+     * Statistik Tier 0 (§14 + SPEC-ANALYST-01 §4) untuk sebuah item.
+     * Mengembalikan kedua varian berdampingan (raw + formula_reduced) bila ada,
+     * dengan kontrak tampilan §4 melekat pada payload.
      */
     public function statistics(string $itemType, string $itemRef, int $limit = 10): array
     {
-        $colls = Collocation::query()
-            ->where('item_type', $itemType)
-            ->where(fn ($q) => $q->where('item_a', $itemRef)->orWhere('item_b', $itemRef))
-            ->orderByDesc('g2')
-            ->limit($limit)
-            ->get()
-            ->map(fn (Collocation $c) => [
-                'partner'         => $c->item_a === $itemRef ? $c->item_b : $c->item_a,
-                'n_ab'            => $c->n_ab,
-                'expected'        => round($c->expected, 2),
-                'ratio'           => $c->expected > 0 ? round($c->n_ab / $c->expected, 1) : null,
-                'pmi'             => $c->pmi !== null ? round($c->pmi, 2) : null,
-                'g2'              => round($c->g2, 1),
-                'fdr_significant' => $c->fdr_significant,
-                'corpus_build_id' => $c->corpus_build_id, // auditability
-            ]);
+        $build = Collocation::query()->max('corpus_build_id'); // build terbaru
+        if (!$build) {
+            return [
+                'available' => false,
+                'note' => 'Statistik Tier 0 belum dibangun (jalankan qse:build-stats). '
+                    . 'Slot jujur kosong (Manifest §3).',
+            ];
+        }
+
+        $variants = [];
+        foreach (['raw', 'formula_reduced'] as $variant) {
+            $colls = Collocation::query()
+                ->where('corpus_build_id', $build)
+                ->where('variant', $variant)
+                ->where('item_type', $itemType)
+                ->where(fn ($q) => $q->where('item_a', $itemRef)->orWhere('item_b', $itemRef))
+                ->orderByDesc('g2')
+                ->limit($limit)
+                ->get()
+                ->map(fn (Collocation $c) => [
+                    'partner'         => $c->item_a === $itemRef ? $c->item_b : $c->item_a,
+                    'n_ab'            => $c->n_ab,
+                    'expected'        => round($c->expected, 2),
+                    'ratio'           => $c->expected > 0 ? round($c->n_ab / $c->expected, 1) : null,
+                    'pmi'             => $c->pmi !== null ? round($c->pmi, 2) : null, // §4: PMI+G² berdampingan
+                    'g2'              => round($c->g2, 1),
+                    'p_permutation'   => $c->p_permutation,
+                    'fdr_significant' => (bool) $c->fdr_significant,
+                    'top_surah_id'    => $c->top_surah_id,
+                    'top_surah_share' => $c->top_surah_share !== null ? round($c->top_surah_share, 3) : null,
+                    // §4 butir 4: peringatan konsentrasi (ambang 0,5)
+                    'concentration_warning' => $c->top_surah_share !== null && $c->top_surah_share >= 0.5,
+                ]);
+            if ($colls->isNotEmpty()) {
+                $variants[$variant] = $colls;
+            }
+        }
 
         $disp = DispersionScore::query()
+            ->where('corpus_build_id', $build)
+            ->where('variant', 'raw')
             ->where('item_type', $itemType)
             ->where('item_ref', $itemRef)
-            ->orderByDesc('corpus_build_id')
             ->first();
 
         return [
-            'collocations' => $colls,
-            'dispersion'   => $disp ? [
-                'juilland_d'      => $disp->juilland_d,
-                'dp'              => $disp->dp,
+            'available'       => !empty($variants),
+            'corpus_build_id' => $build,             // §4 butir 5: auditabilitas
+            'collocations'    => $variants,          // §4 butir 3: dua varian berdampingan
+            'dispersion'      => $disp ? [
+                'juilland_d'      => $disp->juilland_d !== null ? round($disp->juilland_d, 3) : null,
+                'dp'              => $disp->dp !== null ? round($disp->dp, 3) : null,
                 'top_surah_id'    => $disp->top_surah_id,
-                'top_surah_share' => $disp->top_surah_share,
+                'top_surah_share' => $disp->top_surah_share !== null ? round($disp->top_surah_share, 3) : null,
                 'note'            => 'Pola terkonsentrasi di sedikit surah tidak boleh '
                     . 'digeneralisasi se-Al-Qur\'an (Manifest §14).',
             ] : null,
-            'status_epistemik' => 'Angka kolokasi adalah data POLA PENGGUNAAN — bukan makna (§14 aturan 3).',
+            'status_epistemik' => 'Angka kolokasi adalah data POLA PENGGUNAAN — bukan makna '
+                . '(§14 aturan 3). PMI/rasio = effect size; G² = kekuatan bukti; '
+                . 'keduanya tak pernah tampil sendirian (§4).',
         ];
     }
 

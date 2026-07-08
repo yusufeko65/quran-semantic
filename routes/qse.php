@@ -4,6 +4,7 @@ use App\Http\Controllers\Qse\AyahController;
 use App\Http\Controllers\Qse\HypothesisController;
 use App\Http\Controllers\Qse\PageController;
 use App\Http\Controllers\Qse\RootController;
+use App\Http\Controllers\Qse\SearchController;
 use App\Http\Controllers\Qse\SurahController;
 use App\Http\Controllers\Qse\WordController;
 use Illuminate\Support\Facades\Route;
@@ -42,6 +43,11 @@ Route::prefix('qse/api')->name('qse.api.')->group(function () {
         ->whereNumber(['surah', 'number'])->name('ayah.show');
     Route::get('/word/{word}',            [WordController::class, 'show'])->name('word.show');
     Route::get('/root/{root}',            [RootController::class, 'show'])->name('root.show');
+
+    // Discoverability (Fase 2) — pencarian & browse root
+    Route::get('/search',                 [SearchController::class, 'search'])->name('search');
+    Route::get('/roots',                  [SearchController::class, 'roots'])->name('roots.browse');
+
     Route::get('/hypotheses',             [HypothesisController::class, 'index'])->name('hypotheses.index');
     Route::get('/hypotheses/{hypothesis}',[HypothesisController::class, 'show'])->name('hypotheses.show');
 
