@@ -4,13 +4,65 @@
 
 @section('content')
     @php
-        // Kontrak data opsional dari BE (aman jika belum ada — degrade jujur):
-        //   $translation           : objek {text, source_name} | null (terjemahan per-ayat)
-        //   $w->gloss              : string | null                    (terjemahan per-kata)
-        //   $w->tajweed_segments   : array<{text, rule}> | null       (mushaf tajwid; cast ke array di BE)
+        if (!function_exists('qseRenderTajweedWord')) {
+            /**
+             * Merender segmen tajwid per kata dari kontrak BE (offset codepoint,
+             * bukan potongan teks siap pakai). Anotasi yang melintasi batas kata
+             * (spans_words=true) datang sebagai pecahan bertaut lewat group_id;
+             * sisi yang BUKAN is_start/is_end diberi border-radius 0 supaya warna
+             * terlihat kontinu melintasi kata (instruksi handoff BE §1).
+             */
+            function qseRenderTajweedWord($word)
+            {
+                $text = $word->text_uthmani ?? '';
+                $segments = $word->tajweed_segments ?? [];
+                if (empty($segments)) {
+                    return e($text);
+                }
+                usort($segments, fn ($a, $b) => ($a['start'] ?? 0) <=> ($b['start'] ?? 0));
+
+                $len = mb_strlen($text, 'UTF-8');
+                $html = '';
+                $cursor = 0;
+
+                foreach ($segments as $seg) {
+                    $start = max(0, min($seg['start'] ?? 0, $len));
+                    $end   = max($start, min($seg['end'] ?? $start, $len));
+
+                    if ($start > $cursor) {
+                        $html .= e(mb_substr($text, $cursor, $start - $cursor, 'UTF-8'));
+                    }
+
+                    $piece = mb_substr($text, $start, $end - $start, 'UTF-8');
+                    $classes = ['tj-seg', 'tj-' . ($seg['rule'] ?? 'none')];
+                    if (!empty($seg['spans_words'])) {
+                        if (empty($seg['is_start'])) { $classes[] = 'tj-cut-lead'; }
+                        if (empty($seg['is_end']))   { $classes[] = 'tj-cut-trail'; }
+                    }
+
+                    $html .= '<span class="' . implode(' ', $classes) . '" data-tj-group="' . e($seg['group_id'] ?? '') . '">'
+                        . e($piece) . '</span>';
+                    $cursor = $end;
+                }
+
+                if ($cursor < $len) {
+                    $html .= e(mb_substr($text, $cursor, $len - $cursor, 'UTF-8'));
+                }
+
+                return $html;
+            }
+        }
+
+        // Kontrak data dari BE (lihat HANDOFF-BE-KE-UI.md):
+        //   $translation             : objek {text, source: {name,url,license,notes}} | null
+        //   $w->gloss                : string | null
+        //   $w->tajweed_segments     : array<{rule,start,end,group_id,is_start,is_end,spans_words}>
+        //   $tajweedPerWordAvailable : bool — FALSE utk 9 ayat tokenisasi tak selaras (render tanpa warna)
         $translation = $translation ?? null;
-        $hasTajwid   = $ayah->words->contains(fn ($w) => !empty($w->tajweed_segments ?? null));
-        $hasGloss    = $ayah->words->contains(fn ($w) => !empty($w->gloss ?? null));
+        $tajweedPerWordAvailable = $tajweedPerWordAvailable ?? false;
+        $hasTajwid = $tajweedPerWordAvailable
+            && $ayah->words->contains(fn ($w) => !empty($w->tajweed_segments ?? null));
+        $hasGloss  = $ayah->words->contains(fn ($w) => !empty($w->gloss ?? null));
     @endphp
 
     <div class="eyebrow">
@@ -37,27 +89,41 @@
                 @foreach ($ayah->words as $w)
                     <span class="qword" data-word-id="{{ $w->id }}" tabindex="0" role="button"
                           aria-label="Kata ke-{{ $w->position_in_ayah ?? '' }}: buka detail linguistik"
-                    >@if (!empty($w->tajweed_segments ?? null))
-                        @foreach ($w->tajweed_segments as $seg)
-                            <span class="tj-{{ $seg['rule'] ?? 'none' }}">{{ $seg['text'] ?? '' }}</span>
-                        @endforeach
-                    @else
-                        {{ $w->text_uthmani }}
-                    @endif
-                        </span>
+                    >{!! $hasTajwid ? qseRenderTajweedWord($w) : e($w->text_uthmani) !!}</span>
                 @endforeach
             </div>
+
+            @unless ($tajweedPerWordAvailable)
+                <p class="tajwid-caption">
+                    Pewarnaan tajwid per-kata belum tersedia untuk ayat ini — tokenisasi sumber
+                    belum selaras di titik ini. Teks Arab di atas tetap akurat; ini hanya
+                    keterbatasan tampilan warna, sudah tercatat sebagai flag data.
+                </p>
+            @endunless
 
             @if ($hasTajwid)
                 <p class="tajwid-caption" id="tajwid-caption">
                     Warna pada teks menandai <strong>cara membaca</strong> (tajwid) — bukan makna kata (§5).
                 </p>
                 <div class="tajwid-legend" id="tajwid-legend">
-                    <span class="swatch"><i class="sw sw-madd"></i>madd</span>
+                    <span class="swatch"><i class="sw sw-hamzat_wasl"></i>hamzat wasl</span>
+                    <span class="swatch"><i class="sw sw-lam_shamsiyyah"></i>lam syamsiyyah</span>
+                    <span class="swatch"><i class="sw sw-silent"></i>silent</span>
                     <span class="swatch"><i class="sw sw-ghunnah"></i>ghunnah</span>
-                    <span class="swatch"><i class="sw sw-qalqalah"></i>qalqalah</span>
-                    <span class="swatch"><i class="sw sw-idgham"></i>idgham</span>
+                    <span class="swatch"><i class="sw sw-idghaam_ghunnah"></i>idgham ghunnah</span>
+                    <span class="swatch"><i class="sw sw-idghaam_no_ghunnah"></i>idgham bila ghunnah</span>
+                    <span class="swatch"><i class="sw sw-idghaam_shafawi"></i>idgham syafawi</span>
+                    <span class="swatch"><i class="sw sw-idghaam_mutajanisayn"></i>idgham mutajanisain</span>
+                    <span class="swatch"><i class="sw sw-idghaam_mutaqaribayn"></i>idgham mutaqaribain</span>
                     <span class="swatch"><i class="sw sw-ikhfa"></i>ikhfa</span>
+                    <span class="swatch"><i class="sw sw-ikhfa_shafawi"></i>ikhfa syafawi</span>
+                    <span class="swatch"><i class="sw sw-iqlab"></i>iqlab</span>
+                    <span class="swatch"><i class="sw sw-qalqalah"></i>qalqalah</span>
+                    <span class="swatch"><i class="sw sw-madd_2"></i>madd 2 harakat</span>
+                    <span class="swatch"><i class="sw sw-madd_246"></i>madd 2/4/6</span>
+                    <span class="swatch"><i class="sw sw-madd_6"></i>madd 6 harakat</span>
+                    <span class="swatch"><i class="sw sw-madd_munfasil"></i>madd munfasil</span>
+                    <span class="swatch"><i class="sw sw-madd_muttasil"></i>madd muttasil</span>
                 </div>
             @endif
 
@@ -75,7 +141,10 @@
             @if ($translation)
                 <p class="tr-text">{{ $translation->text }}</p>
                 <p class="strip-note">
-                    Data sekunder · {{ $translation->source_name ?? 'sumber tercantum' }} · bukan makna final (§8).
+                    Data sekunder · {{ $translation->source->name ?? 'sumber tercantum' }} · bukan makna final (§8).
+                    @if (!empty($translation->source->license))
+                        Lisensi: {{ $translation->source->license }}.
+                    @endif
                 </p>
             @else
                 <p class="strip-empty">

@@ -78,15 +78,37 @@
     }
 
     const stats = l3.statistics || {};
-    const colls = stats.collocations || [];
-    if (colls.length) {
-      html += '<div class="colloc">';
-      colls.slice(0, 5).forEach((c) => {
-        html += `<div class="colloc-row"><span class="cp">${esc(c.partner)}</span>` +
-          `<span class="wd-mono">n=${esc(c.n_ab)} · ${c.ratio != null ? esc(c.ratio) + '×' : '–'} · G²=${esc(c.g2)}</span></div>`;
-      });
-      html += '</div>';
-      html += disclaimer(stats.status_epistemik);
+    const collocations = stats.collocations || {};
+    const raw = collocations.raw || [];
+    const reduced = collocations.formula_reduced || [];
+
+    const collocRow = (c) => {
+      const warn = c.concentration_warning
+        ? `<span class="colloc-warn" title="Pola terkonsentrasi di sedikit surah — jangan digeneralisasi">⚠ terkonsentrasi${c.top_surah_share != null ? ' ' + Math.round(c.top_surah_share * 100) + '%' : ''}</span>`
+        : '';
+      const fdr = c.fdr_significant
+        ? '<span class="colloc-fdr">signifikan (FDR)</span>'
+        : '<span class="colloc-fdr insig">tidak signifikan (FDR)</span>';
+      return `<div class="colloc-row">` +
+        `<div class="colloc-top"><span class="cp">${esc(c.partner)}</span>${warn}</div>` +
+        `<span class="wd-mono">n=${esc(c.n_ab)} · expected=${esc(c.expected)} · ${c.ratio != null ? esc(c.ratio) + '×' : '–'}` +
+        ` · PMI=${esc(c.pmi)} · G²=${esc(c.g2)}${c.p_permutation != null ? ' · p=' + esc(c.p_permutation) : ''}</span> ${fdr}` +
+        `</div>`;
+    };
+
+    const variantBlock = (title, list) => {
+      if (!list.length) return '';
+      return `<div class="colloc-variant"><p class="colloc-variant-title">${esc(title)}</p>` +
+        list.slice(0, 5).map(collocRow).join('') + `</div>`;
+    };
+
+    if (raw.length || reduced.length) {
+      html += `<div class="colloc">` +
+        variantBlock('Mentah (raw)', raw) +
+        variantBlock('Formula dikurangi (basmalah dkk. dibuang)', reduced) +
+        `</div>`;
+      html += disclaimer(stats.status_epistemik ||
+        'PMI & G² adalah pola statistik penggunaan, bukan makna. Selalu dibaca berdampingan, tidak sendirian.');
     } else {
       html += `<div class="wd-empty">` +
         `<p class="wd-empty-label">Statistik kolokasi (Tier 0) — belum tersedia</p>` +
@@ -95,7 +117,10 @@
     }
 
     html += disclaimer(l3.disclaimer);
-    html += dasar('query root_id di DB (deterministik) · angka kolokasi = pola penggunaan, bukan makna (§14).');
+    const buildId = stats.corpus_build_id != null ? stats.corpus_build_id : l3.corpus_build_id;
+    html += dasar('query root_id di DB (deterministik)' +
+      (buildId != null ? ` · corpus_build_id=${esc(buildId)} (auditable)` : '') +
+      ' · angka kolokasi = pola penggunaan, bukan makna (§14); dua varian raw/formula-reduced dibaca berdampingan, bukan dipilih salah satu.');
     return html + `</div>`;
   }
 

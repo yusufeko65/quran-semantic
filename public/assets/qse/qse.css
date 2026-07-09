@@ -628,3 +628,127 @@ h1.page-title {
 .mushaf-text .qword {
   transition: color 0.15s ease;
 }
+
+/* ============================================================
+   QSE — Integrasi Handoff BE (tajwid per-kata + statistik Tier 0)
+   [TAMBAHKAN DI AKHIR qse.css, SETELAH semua patch sebelumnya]
+   ============================================================ */
+
+/* ---- 1. Palet 18 kode aturan tajwid (menggantikan set 6-warna lama) ----
+   Dikelompokkan per keluarga fonetik agar tetap koheren meski jumlahnya
+   banyak. TERPISAH TOTAL dari palet epistemik (--gold/--rose/--verdict-*)
+   di kedua tema — variabel ini tidak pernah ditimpa oleh sistem tema. */
+:root {
+  --tj-hamzat_wasl:          #9CA3AF;
+  --tj-lam_shamsiyyah:       #78716C;
+  --tj-silent:               #A8A29E;
+
+  --tj-ghunnah:              #2E7D5B;
+  --tj-idghaam_ghunnah:      #16A34A;
+  --tj-idghaam_no_ghunnah:   #65A30D;
+  --tj-idghaam_shafawi:      #059669;
+  --tj-idghaam_mutajanisayn: #0D9488;
+  --tj-idghaam_mutaqaribayn: #0891B2;
+
+  --tj-ikhfa:                #CA8A04;
+  --tj-ikhfa_shafawi:        #D97706;
+  --tj-iqlab:                #9C5BA0;
+
+  --tj-qalqalah:             #2C6E9C;
+
+  --tj-madd_2:               #DC2626;
+  --tj-madd_246:             #EA580C;
+  --tj-madd_6:               #B91C1C;
+  --tj-madd_munfasil:        #F97316;
+  --tj-madd_muttasil:        #C2410C;
+}
+
+/* ---- 2. Segmen tajwid: latar tinta tipis, bukan sekadar warna teks ----
+   Memakai background (bukan color saja) supaya anotasi terlihat sebagai
+   satu larik yang disorot, konsisten dengan instruksi "warna terlihat
+   kontinu melintasi spasi" untuk anotasi lintas-kata. */
+.tj-seg {
+  border-radius: 3px;
+  padding: 0 0.03em;
+  transition: background 0.15s ease;
+}
+.mushaf-text.tajwid-on .tj-seg { background: color-mix(in srgb, var(--tj-color, transparent) 22%, transparent); }
+.mushaf-text:not(.tajwid-on) .tj-seg { background: none; border-radius: 0; }
+
+.tj-hamzat_wasl          { --tj-color: var(--tj-hamzat_wasl); }
+.tj-lam_shamsiyyah       { --tj-color: var(--tj-lam_shamsiyyah); }
+.tj-silent               { --tj-color: var(--tj-silent); }
+.tj-ghunnah              { --tj-color: var(--tj-ghunnah); }
+.tj-idghaam_ghunnah      { --tj-color: var(--tj-idghaam_ghunnah); }
+.tj-idghaam_no_ghunnah   { --tj-color: var(--tj-idghaam_no_ghunnah); }
+.tj-idghaam_shafawi      { --tj-color: var(--tj-idghaam_shafawi); }
+.tj-idghaam_mutajanisayn { --tj-color: var(--tj-idghaam_mutajanisayn); }
+.tj-idghaam_mutaqaribayn { --tj-color: var(--tj-idghaam_mutaqaribayn); }
+.tj-ikhfa                { --tj-color: var(--tj-ikhfa); }
+.tj-ikhfa_shafawi        { --tj-color: var(--tj-ikhfa_shafawi); }
+.tj-iqlab                { --tj-color: var(--tj-iqlab); }
+.tj-qalqalah             { --tj-color: var(--tj-qalqalah); }
+.tj-madd_2               { --tj-color: var(--tj-madd_2); }
+.tj-madd_246             { --tj-color: var(--tj-madd_246); }
+.tj-madd_6               { --tj-color: var(--tj-madd_6); }
+.tj-madd_munfasil        { --tj-color: var(--tj-madd_munfasil); }
+.tj-madd_muttasil        { --tj-color: var(--tj-madd_muttasil); }
+
+/* ---- 3. Anotasi lintas-kata: potong sisi yang bukan is_start/is_end,
+   lalu "bocorkan" sedikit latar ke celah spasi supaya terlihat menyatu ----
+   Logical properties (start/end mengikuti dir="rtl" pada container). */
+.tj-cut-lead {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  margin-inline-start: -0.14em;
+  padding-inline-start: 0.14em;
+}
+.tj-cut-trail {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+  margin-inline-end: -0.14em;
+  padding-inline-end: 0.14em;
+}
+
+/* ---- 4. Legend 18-item: grid rapat agar tetap ringkas ---- */
+.tajwid-legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.4rem 0.7rem; }
+.tajwid-legend .swatch { display: inline-flex; align-items: center; gap: 0.35rem; font-family: var(--font-mono); font-size: 0.66rem; color: var(--ink-soft); }
+.tajwid-legend .sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: 0 0 auto; }
+.sw-hamzat_wasl          { background: var(--tj-hamzat_wasl); }
+.sw-lam_shamsiyyah       { background: var(--tj-lam_shamsiyyah); }
+.sw-silent               { background: var(--tj-silent); }
+.sw-ghunnah              { background: var(--tj-ghunnah); }
+.sw-idghaam_ghunnah      { background: var(--tj-idghaam_ghunnah); }
+.sw-idghaam_no_ghunnah   { background: var(--tj-idghaam_no_ghunnah); }
+.sw-idghaam_shafawi      { background: var(--tj-idghaam_shafawi); }
+.sw-idghaam_mutajanisayn { background: var(--tj-idghaam_mutajanisayn); }
+.sw-idghaam_mutaqaribayn { background: var(--tj-idghaam_mutaqaribayn); }
+.sw-ikhfa                { background: var(--tj-ikhfa); }
+.sw-ikhfa_shafawi        { background: var(--tj-ikhfa_shafawi); }
+.sw-iqlab                { background: var(--tj-iqlab); }
+.sw-qalqalah             { background: var(--tj-qalqalah); }
+.sw-madd_2               { background: var(--tj-madd_2); }
+.sw-madd_246             { background: var(--tj-madd_246); }
+.sw-madd_6               { background: var(--tj-madd_6); }
+.sw-madd_munfasil        { background: var(--tj-madd_munfasil); }
+.sw-madd_muttasil        { background: var(--tj-madd_muttasil); }
+
+/* ---- 5. Statistik Lapisan 3: dua varian berdampingan + peringatan ---- */
+.colloc { display: flex; flex-direction: column; gap: 1rem; }
+.colloc-variant-title {
+  font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink-faint); margin: 0 0 0.4rem;
+}
+.colloc-row { display: flex; flex-direction: column; gap: 0.15rem; padding: 0.3rem 0; border-bottom: 1px solid var(--rule); }
+.colloc-row:last-child { border-bottom: none; }
+.colloc-top { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.colloc-top .cp { font-family: var(--font-arabic); font-size: 1.05rem; }
+.colloc-warn {
+  font-family: var(--font-mono); font-size: 0.62rem; color: var(--verdict-partial);
+  background: color-mix(in srgb, var(--verdict-partial) 14%, transparent);
+  padding: 0.1rem 0.4rem; border-radius: 999px;
+}
+.colloc-fdr {
+  font-family: var(--font-mono); font-size: 0.62rem; color: var(--verdict-sync);
+}
+.colloc-fdr.insig { color: var(--ink-faint); }
