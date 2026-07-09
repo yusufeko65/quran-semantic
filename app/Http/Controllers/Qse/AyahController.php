@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Ayah;
 use App\Models\Translation;
 use App\Models\WordGloss;
+use App\Services\Qse\TajweedService;
 
 /**
  * Endpoint ringan halaman Ayat (handoff UI #4) — SATU panggilan untuk render awal:
@@ -14,7 +15,7 @@ use App\Models\WordGloss;
  */
 class AyahController extends Controller
 {
-    public function show(int $surah, int $number)
+    public function show(int $surah, int $number, TajweedService $tajweed)
     {
         $ayah = Ayah::query()
             ->where('surah_id', $surah)
@@ -42,6 +43,11 @@ class AyahController extends Controller
             ->unique('word_id')
             ->keyBy('word_id');
 
+        // Tajwid per-kata: diturunkan dari ayahs.text_tajweed (sumber kebenaran).
+        // Anotasi lintas-kata dipecah bertaut lewat group_id (lihat TajweedService).
+        $tajweedByWord   = $tajweed->segmentsPerWord($ayah);
+        $tajweedPerWordOk = $tajweed->isPerWordAvailable($ayah);
+
         $cls = $ayah->currentClassification;
 
         return response()->json([
@@ -50,7 +56,8 @@ class AyahController extends Controller
                 'surah'          => $ayah->surah->transliteration,
                 'number'         => $ayah->number_in_surah,
                 'text_uthmani'   => $ayah->text_uthmani,
-                'text_tajweed'   => $ayah->text_tajweed, // null selama data tajwid belum diimpor
+                'text_tajweed'   => $ayah->text_tajweed, // per-ayat, offset codepoint (sumber kebenaran)
+                'tajweed_per_word_available' => $tajweedPerWordOk,
                 'classification' => $cls ? [
                     'value'  => $cls->classification,
                     'source' => ['name' => $cls->source?->name, 'url' => $cls->source?->url],
@@ -76,6 +83,8 @@ class AyahController extends Controller
                 'gloss'    => $glosses[$w->id]->gloss ?? null,
                 'root_id'  => $w->root_id,
                 'pos'      => $w->pos,
+                // offset RELATIF terhadap text_uthmani kata ini
+                'tajweed_segments' => $tajweedByWord[$w->id] ?? [],
             ])->values(),
         ]);
     }

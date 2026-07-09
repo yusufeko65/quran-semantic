@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Ayah;
 use App\Models\Hypothesis;
 use App\Models\Surah;
+use App\Models\Translation;
+use App\Models\WordGloss;
+use App\Services\Qse\TajweedService;
 
 /**
  * Controller halaman (Blade) — sengaja dipisah dari controller JSON API.
@@ -30,15 +33,47 @@ class PageController extends Controller
         ]);
     }
 
-    public function ayah(int $surah, int $number)
+    public function ayah(int $surah, int $number, TajweedService $tajweed)
     {
         $ayah = Ayah::query()
             ->where('surah_id', $surah)
             ->where('number_in_surah', $number)
-            ->with(['surah', 'words', 'currentClassification'])
+            ->with(['surah', 'words', 'currentClassification.source'])
             ->firstOrFail();
 
-        return view('qse.ayah', ['ayah' => $ayah]);
+        // Terjemahan ayat (Referensi Pembanding — atribusi wajib ikut, §18)
+        $translation = Translation::query()
+            ->where('ayah_id', $ayah->id)
+            ->orderByRaw('lang = ? DESC', [config('qse.translation_lang', 'id')])
+            ->with('source:id,name,url,license,notes')
+            ->first();
+
+        // Gloss per kata (satu query, keyed by word_id)
+        $glosses = WordGloss::query()
+            ->whereIn('word_id', $ayah->words->pluck('id'))
+            ->orderByRaw('lang = ? DESC', [config('qse.gloss_lang', 'id')])
+            ->get()->unique('word_id')->keyBy('word_id');
+
+        // Tajwid per kata (turunan dari ayahs.text_tajweed)
+        $tajweedByWord = $tajweed->segmentsPerWord($ayah);
+
+        // Tempelkan ke tiap kata agar view cukup memakai $w->gloss / $w->tajweed_segments
+        foreach ($ayah->words as $w) {
+            $w->gloss            = $glosses[$w->id]->gloss ?? null;
+            $w->tajweed_segments = $tajweedByWord[$w->id] ?? [];
+        }
+
+        return view('qse.ayah', [
+            'ayah'        => $ayah,
+            'translation' => $translation,
+            'tajweedPerWordAvailable' => $tajweed->isPerWordAvailable($ayah),
+        ]);
+    }
+
+    /** Halaman statis Panduan Metodologi (handoff UI #1) — tanpa query DB. */
+    public function metodologi()
+    {
+        return view('qse.metodologi');
     }
 
     public function hypotheses()
