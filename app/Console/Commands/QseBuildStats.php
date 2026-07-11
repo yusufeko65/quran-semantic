@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\DB;
  */
 class QseBuildStats extends Command
 {
-    protected $signature = 'qse:build-stats {--desc=Build statistik Tier 0}';
+    protected $signature = 'qse:build-stats {--desc=Build statistik Tier 0} {--verify : Jalankan 7 asersi T6 (SPEC-ANALYST-02 A6-A9) setelah build selesai}';
     protected $description = 'Hitung collocations, dispersion, dan formula (SPEC-ANALYST-01)';
 
     // --- Parameter build (D4/D5) — dicatat ke notes ---
@@ -64,14 +64,15 @@ class QseBuildStats extends Command
             'unit' => 'ayah', 'counting' => 'binary',
         ];
         $buildId = DB::table('corpus_builds')->insertGetId([
-            'description'     => $this->option('desc'),
+            'description'     => $this->option('desc'),   // T2: dipulihkan jadi teks manusia
             'data_source_ids' => json_encode($sourceIds),
             'script_hash'     => hash_file('sha256', __FILE__),
             'built_at'        => now(),
         ]);
-        // simpan params ke notes (kolom notes belum ada di corpus_builds → pakai description gabungan)
+        // T2: params disimpan ke notes (kolom JSON khusus, dapat dikueri) —
+        // family_sizes diisi belakangan per (variant x item_type) saat kolokasi selesai
         DB::table('corpus_builds')->where('id', $buildId)->update([
-            'description' => $this->option('desc') . ' | params=' . json_encode($params),
+            'notes' => json_encode(['params' => $params, 'family_sizes' => []]),
         ]);
         $this->line("   corpus_build_id = {$buildId}");
 
@@ -95,22 +96,30 @@ class QseBuildStats extends Command
         }
         $this->line('   ayat: ' . count($ayahWords) . ' | kata: ' . $words->count());
 
-        // ---------- 3. DETEKSI FORMULA (D4) ----------
+        // ---------- 3. DETEKSI FORMULA (D4, T9-fixed) ----------
         $this->info('3. Deteksi formula');
-        $formulaRanges = $this->detectFormulas($buildId, $ayahWords, $ayahNorm);
+        [$formulaRanges, $firstInstanceAyahs] = $this->detectFormulas($buildId, $ayahWords, $ayahNorm);
         $this->line('   ayat/rentang formulaik terdeteksi: ' . count($formulaRanges));
+        $this->line('   ayat "instance pertama" (utk A6 n_ab_first_instance): ' . count($firstInstanceAyahs));
 
         // ---------- 4. PER VARIAN × ITEM_TYPE ----------
+        $familySizes = []; // T2: dikumpulkan utk corpus_builds.notes
         foreach (['raw', 'formula_reduced'] as $variant) {
             foreach (['root', 'lemma'] as $itemType) {
                 $this->info("4. Kolokasi — variant={$variant} item_type={$itemType}");
-                $this->buildCollocations($buildId, $variant, $itemType, $ayahWords, $formulaRanges);
+                $famSize = $this->buildCollocations($buildId, $variant, $itemType, $ayahWords, $formulaRanges, $firstInstanceAyahs);
+                $familySizes["{$variant}.{$itemType}"] = $famSize;
             }
             // ---------- 5. DISPERSION per varian ----------
             foreach (['root', 'lemma'] as $itemType) {
                 $this->buildDispersion($buildId, $variant, $itemType, $ayahWords, $formulaRanges);
             }
         }
+
+        // T2: tulis family_sizes final ke notes (params sudah ada sejak registrasi)
+        $notes = json_decode(DB::table('corpus_builds')->where('id', $buildId)->value('notes'), true);
+        $notes['family_sizes'] = $familySizes;
+        DB::table('corpus_builds')->where('id', $buildId)->update(['notes' => json_encode($notes)]);
 
         $dur = round(microtime(true) - $t0, 1);
         $this->newLine();
@@ -119,15 +128,111 @@ class QseBuildStats extends Command
         $this->line('dispersion  : ' . DB::table('dispersion_scores')->where('corpus_build_id', $buildId)->count());
         $this->line('formulas    : ' . DB::table('formulas')->where('corpus_build_id', $buildId)->count());
 
+        if ($this->option('verify')) {
+            $allPass = $this->runVerification($buildId);
+            return $allPass ? self::SUCCESS : self::FAILURE;
+        }
+
         return self::SUCCESS;
     }
 
+    /**
+     * --verify (SPEC-ANALYST-02 A6-A9, REVIEW-ANALYST-01 T6) — 7 asersi Fase 1.
+     * Mencetak PASS/FAIL per asersi. Return true hanya jika SEMUA lolos.
+     */
+    private function runVerification(int $buildId): bool
+    {
+        $this->newLine();
+        $this->info('=== VERIFIKASI T6 (7 asersi Fase 1) ===');
+        $results = [];
+
+        $get = fn ($a, $b) => DB::table('collocations')
+            ->where('corpus_build_id', $buildId)->where('item_type', 'lemma')
+            ->where(fn ($q) => $q->where(fn ($w) => $w->where('item_a', $a)->where('item_b', $b))
+                                 ->orWhere(fn ($w) => $w->where('item_a', $b)->where('item_b', $a)));
+
+        // A6.1 — TC#6 raw. Target DIKUNCI ULANG oleh Amendemen A14 (D6-C: N_lemma
+        // = 6216, bukan 6236 — ayat tanpa lemma sama sekali dikeluarkan dari N).
+        // Rantai histori dipertahankan (Manifest §3): 541 → 540,60 → 538,65 (N=6236,
+        // PATCH-Manifest/A2) → 538,19 (N=6216, A14 — TARGET SAAT INI).
+        // Toleransi diperketat (A12: "toleransi hanya untuk derau numerik") karena
+        // ini angka analitik presisi tinggi, bukan estimasi.
+        $r = (clone $get)('غَفُور', 'رَحِيم')->where('variant', 'raw')->first();
+        $pass = $r && $r->n_ab == 72 && abs($r->expected - 1.698198) < 0.0005
+            && abs($r->pmi - 5.405920) < 0.0005
+            && abs($r->g2 - 538.18725) < 0.001 && (int) $r->fdr_significant === 1;
+        $results['A6.1 TC#6 raw (A14: n_ab=72,E=1.698198,PMI=5.40592,G²=538.18725,fdr=1)'] = [$pass, $r];
+
+        // A6.2 — baris TC#6 pada formula_reduced ADA. Nilai numerik TIDAK dikunci
+        // di sini: T9 (n-gram bersarang) baru diperbaiki sesi ini: formula lama
+        // (116, tercemar double-count) -> formula baru (disjoint longest-match).
+        // Analyst mengunci angka final setelah build produksi + konfirmasi (A6
+        // note: "nilai lama berstatus BATAS ATAS, bukan target").
+        $r2 = (clone $get)('غَفُور', 'رَحِيم')->where('variant', 'formula_reduced')->first();
+        $results['A6.2 TC#6 baris formula_reduced ada (nilai numerik menunggu kunci Analyst pasca-T9)'] = [$r2 !== null, $r2];
+
+        // A7.1 — TC#7 raw. Target DIKUNCI ULANG A14 (N=6216).
+        $r3 = (clone $get)('عَزِيز', 'رَحِيم')->where('variant', 'raw')->first();
+        $pass7 = $r3 && $r3->n_ab == 14 && abs($r3->expected - 1.884813) < 0.0005
+            && $r3->pmi !== null && abs($r3->pmi - 2.892933) < 0.0005
+            && abs($r3->g2 - 34.81999) < 0.001 && (int) $r3->fdr_significant === 1
+            && (int) $r3->top_surah_id === 26 && abs($r3->top_surah_share - 0.6429) < 0.001;
+        $results['A7.1 TC#7 raw (A14: n_ab=14,E=1.884813,PMI=2.892933,G²=34.81999,fdr=1,surah=26,share=0.643)'] = [$pass7, $r3];
+
+        // A7.2 — formula_reduced n_ab < 14 (asersi ARAH, tidak bergantung nilai N —
+        // tetap berlaku pasca-T9 karena refrain Asy-Syu'ara tetap terdedup).
+        $r4 = (clone $get)('عَزِيز', 'رَحِيم')->where('variant', 'formula_reduced')->first();
+        $results['A7.2 TC#7 formula_reduced n_ab < 14'] = [$r4 && $r4->n_ab < 14, $r4];
+
+        // A8.1 — kanari substring vs tag (n_a kolokasi harus = via_tag, BUKAN via_substring)
+        $viaTag = DB::table('words')->where('lemma', 'عَزِيز')->distinct('ayah_id')->count('ayah_id');
+        $viaSubstring = DB::table('ayahs')->where('text_normalized', 'like', '%عزيز%')->count();
+        $matchesTag = $r3 && (int) $r3->n_a === $viaTag;
+        $results["A8.1 kanari n_a={$viaTag}(tag) vs {$viaSubstring}(substring), kolokasi pakai tag"] = [$matchesTag && $viaTag !== $viaSubstring, null];
+
+        // A9.1-A9.3 — dua baris pre-registered, pmi NULL, fdr=0
+        $r5 = (clone $get)('رَحِيم', 'حَكِيم')->where('variant', 'raw')->first();
+        $r6 = (clone $get)('رَحِيم', 'عَلِيم')->where('variant', 'raw')->first();
+        $passPre = $r5 && $r6 && (int) $r5->n_ab === 0 && (int) $r6->n_ab === 0
+            && $r5->pmi === null && $r6->pmi === null
+            && (int) $r5->fdr_significant === 0 && (int) $r6->fdr_significant === 0;
+        $results['A9.1-A9.3 pre-registered (n_ab=0, pmi NULL, fdr=0) x2'] = [$passPre, [$r5, $r6]];
+
+        $allPass = true;
+        foreach ($results as $label => [$pass, $data]) {
+            $mark = $pass ? '✅ PASS' : '❌ FAIL';
+            $this->line("  {$mark}  {$label}");
+            if (!$pass) {
+                $allPass = false;
+                $this->line('         data: ' . json_encode($data));
+            }
+        }
+        $this->newLine();
+        $this->line($allPass ? '=== SEMUA 7 ASERSI LOLOS ===' : '=== ADA ASERSI GAGAL — lihat detail di atas ===');
+
+        return $allPass;
+    }
+
     // ============================================================
-    // D4 — Deteksi formula. Return: ayah_id => array rentang [start,end] yang formulaik-ulangan
+    // D4 — Deteksi formula. Return: [ranges, firstInstanceAyahs]
+    //   ranges            : ayah_id => array rentang [start,end] yang direduksi
+    //   firstInstanceAyahs: set ayah_id yang jadi "instance pertama" formula
+    //                       APAPUN (dipakai A6: n_ab_first_instance)
+    //
+    // T9 FIX (REVIEW-ANALYST-01 lanjutan): deteksi lama memeriksa n=2..6
+    // SECARA INDEPENDEN — satu ayat bisa qualifying di beberapa panjang n
+    // sekaligus (nested/overlapping), menyebabkan occurrence_count dobel-hitung
+    // dan jaminan "instance pertama dipertahankan" bocor (instance pertama
+    // milik pola panjang mana yang dipertahankan?).
+    //
+    // Perbaikan: per ayat, pilih TEPAT SATU n-gram — yang TERPANJANG di antara
+    // n=6..2 yang lolos ambang (>=10 ayat secara global). Rentang disjoint
+    // by construction: satu ayat hanya representasi SATU formula ngram.
     // ============================================================
     private function detectFormulas(int $buildId, array $ayahWords, array $ayahNorm): array
     {
-        $ranges = [];       // ayah_id => [[start,end], ...]
+        $ranges = [];
+        $firstInstanceAyahs = [];
         $now = now();
 
         // (1) Ulangan ayat-penuh: text_normalized identik >= FULL_AYAH_MIN
@@ -146,19 +251,20 @@ class QseBuildStats extends Command
                 'status' => 'auto', 'is_current' => true, 'created_at' => $now,
             ]);
             sort($aids);
+            $firstInstanceAyahs[$aids[0]] = true;
             foreach ($aids as $i => $aid) {
                 $isFirst = $i === 0;
                 DB::table('formula_occurrences')->insert([
                     'formula_id' => $fid, 'ayah_id' => $aid,
                     'start_pos' => 1, 'end_pos' => $wc, 'is_first_instance' => $isFirst,
                 ]);
-                if (!$isFirst) $ranges[$aid][] = [1, $wc]; // hanya ulangan yang direduksi
+                if (!$isFirst) $ranges[$aid][] = [1, $wc];
             }
         }
 
-        // (2) Fawasil / n-gram akhir-ayat verbatim >= NGRAM_MIN_AYAT
-        // Bangun n-gram akhir per ayat (kata ternormalisasi), cari yang sering
-        $ngramAyat = []; // "n|token token" => [ [aid, startPos, endPos], ... ]
+        // (2) Fawasil / n-gram akhir-ayat — T9 FIX: disjoint longest-match
+        // Pass 2a: kumpulkan KANDIDAT (n, pattern) => set ayat, n=2..6
+        $candidates = []; // "n|pattern" => [ayat_id => [start,end]]
         foreach ($ayahWords as $aid => $ws) {
             $toks = array_map(fn ($x) => $this->stripDiacritics($x[3]), $ws);
             $m = count($toks);
@@ -166,39 +272,63 @@ class QseBuildStats extends Command
                 if ($m < $n) continue;
                 $slice = array_slice($toks, $m - $n, $n);
                 $key = $n . '|' . implode(' ', $slice);
-                // posisi kata: (m-n+1) .. m  (1-indexed)
-                $ngramAyat[$key][] = [$aid, $m - $n + 1, $m];
+                $candidates[$key][$aid] = [$m - $n + 1, $m];
             }
         }
-        foreach ($ngramAyat as $key => $occ) {
-            $ayatUnik = array_unique(array_map(fn ($o) => $o[0], $occ));
-            if (count($ayatUnik) < self::NGRAM_MIN_AYAT) continue;
+        // Pass 2b: pola QUALIFYING (>=10 ayat unik)
+        $qualifying = [];
+        foreach ($candidates as $key => $ayatMap) {
+            if (count($ayatMap) >= self::NGRAM_MIN_AYAT) {
+                $qualifying[$key] = true;
+            }
+        }
+        // Pass 2c: per ayat, pilih TERPANJANG (n=6 turun ke 2) yang qualifying
+        $assign = []; // aid => [n, pattern, start, end]
+        foreach ($ayahWords as $aid => $ws) {
+            $toks = array_map(fn ($x) => $this->stripDiacritics($x[3]), $ws);
+            $m = count($toks);
+            for ($n = self::NGRAM_MAX_N; $n >= self::NGRAM_MIN_N; $n--) {
+                if ($m < $n) continue;
+                $slice = array_slice($toks, $m - $n, $n);
+                $pattern = implode(' ', $slice);
+                $key = $n . '|' . $pattern;
+                if (isset($qualifying[$key])) {
+                    $assign[$aid] = [$n, $pattern, $m - $n + 1, $m];
+                    break; // ambil yang TERPANJANG, berhenti (disjoint)
+                }
+            }
+        }
+        // Pass 2d: kelompokkan assignment akhir per (n,pattern) -> tulis formula
+        $grouped = [];
+        foreach ($assign as $aid => [$n, $pattern, $s, $e]) {
+            $grouped[$n . '|' . $pattern][] = [$aid, $s, $e];
+        }
+        foreach ($grouped as $key => $occ) {
             [$n, $pattern] = explode('|', $key, 2);
+            usort($occ, fn ($a, $b) => $a[0] <=> $b[0]);
             $fid = DB::table('formulas')->insertGetId([
                 'corpus_build_id' => $buildId, 'kind' => 'verse_final_ngram',
                 'pattern_normalized' => mb_substr($pattern, 0, 500),
                 'word_count' => (int) $n, 'occurrence_count' => count($occ),
-                'detection_params' => json_encode(['n' => (int) $n, 'min_ayat' => self::NGRAM_MIN_AYAT, 'anchor' => 'verse_final']),
+                'detection_params' => json_encode([
+                    'n' => (int) $n, 'min_ayat' => self::NGRAM_MIN_AYAT,
+                    'anchor' => 'verse_final', 't9_fix' => 'disjoint_longest_match',
+                ]),
                 'status' => 'auto', 'is_current' => true, 'created_at' => $now,
             ]);
-            // instance pertama (ayat terkecil) dipertahankan; sisanya direduksi
-            $seen = [];
-            usort($occ, fn ($a, $b) => $a[0] <=> $b[0]);
-            foreach ($occ as [$aid, $s, $e]) {
-                $isFirst = !isset($seen[$this->firstKeyFor($aid, $ayatUnik)]) && $aid === min($ayatUnik);
-                $first = $aid === min($ayatUnik);
+            $firstInstanceAyahs[$occ[0][0]] = true;
+            foreach ($occ as $i => [$aid, $s, $e]) {
+                $isFirst = $i === 0;
                 DB::table('formula_occurrences')->insert([
                     'formula_id' => $fid, 'ayah_id' => $aid,
-                    'start_pos' => $s, 'end_pos' => $e, 'is_first_instance' => $first,
+                    'start_pos' => $s, 'end_pos' => $e, 'is_first_instance' => $isFirst,
                 ]);
-                if (!$first) $ranges[$aid][] = [$s, $e];
+                if (!$isFirst) $ranges[$aid][] = [$s, $e];
             }
         }
 
-        return $ranges;
+        return [$ranges, $firstInstanceAyahs];
     }
-
-    private function firstKeyFor($aid, $set) { return $aid; } // helper noop (kejelasan)
 
     // ============================================================
     // Bangun himpunan item biner per ayat, hormati formula_reduced (D4 semantik)
@@ -228,39 +358,25 @@ class QseBuildStats extends Command
         return false;
     }
 
-    /**
-     * n_total untuk formula_reduced: jumlah ayat yang TIDAK gugur penuh.
-     * Ayat "gugur penuh" = seluruh katanya berada dalam rentang formula-ulangan.
-     */
-    private function totalAfterReduction(array $ayahWords, array $formulaRanges): int
-    {
-        $survive = 0;
-        foreach ($ayahWords as $aid => $ws) {
-            $red = $formulaRanges[$aid] ?? [];
-            if (!$red) { $survive++; continue; }
-            $allCovered = true;
-            foreach ($ws as [$pos]) {
-                if (!$this->inAnyRange($pos, $red)) { $allCovered = false; break; }
-            }
-            if (!$allCovered) $survive++;
-        }
-        return $survive;
-    }
-
     // ============================================================
     // D5+D6 — kolokasi + statistik untuk satu (variant, item_type)
     // ============================================================
-    private function buildCollocations(int $buildId, string $variant, string $itemType, array $ayahWords, array $formulaRanges): void
+    private function buildCollocations(int $buildId, string $variant, string $itemType, array $ayahWords, array $formulaRanges, array $firstInstanceAyahs): int
     {
         $sets = $this->itemSetsPerAyah($variant, $itemType, $ayahWords, $formulaRanges);
 
-        // D5/spec baris 54: n_total = jumlah ayat dalam SCOPE VARIAN.
-        //  - raw            : seluruh 6.236 ayat (konstan; ayat tanpa item tetap
-        //                     bagian populasi — mereproduksi angka acuan TC#6/#7).
-        //  - formula_reduced: 6.236 minus ayat yang GUGUR PENUH karena formula.
-        $N = $variant === 'raw'
-            ? count($ayahWords)                       // seluruh ayat korpus (6.236)
-            : $this->totalAfterReduction($ayahWords, $formulaRanges);
+        // D6-C/D6-D/D6-E (Amendemen A13/A14, menggantikan asumsi N=6236 konstan):
+        // N = jumlah ayat yang MEMUAT >=1 item pada (variant, item_type) ini —
+        // BUKAN konstanta 6.236/6.236-103. Model nol pertukaran-ayat mengandaikan
+        // ayat DAPAT memuat item; ayat tanpa item sama sekali (mis. muqatta'at
+        // pada pass root/lemma) adalah "dokumen kosong" struktural, bukan trial
+        // yang sah. Diverifikasi empiris: N_lemma(raw)=6216, N_root(raw)=6214 —
+        // 20 ayat muqatta'at (keduanya) + 2 ayat partikel/PN tanpa root (70:15,
+        // 85:18) yang QAC tidak me-root-kan. Berlaku SAMA untuk formula_reduced
+        // (D6-E): N = ayat ber-item setelah reduksi, bukan "6236 minus ayat
+        // gugur-penuh" (dua hal itu BERBEDA — ayat bisa tak gugur-penuh tapi
+        // toh berakhir tanpa item jika kata yang tersisa memang tak berlemma).
+        $N = count($sets);
 
         // n_a per item + inverted index item => set(ayah)
         $itemAyahs = []; // item => [ayah_id...]
@@ -311,6 +427,13 @@ class QseBuildStats extends Command
             $g2 = $this->g2($nab, $na, $nb, $N);
             $p = $nab > 0 ? $this->hyperSF($nab, $N, $na, $nb) : null;
 
+            // A6/D4-A: dari n_ab ini, berapa yang bertahan HANYA karena aturan
+            // "instance pertama formula dipertahankan"? Hanya relevan utk
+            // formula_reduced (di raw, tidak ada reduksi -> selalu 0).
+            $nabFirstInstance = $variant === 'formula_reduced'
+                ? count(array_intersect($ayahs, array_keys($firstInstanceAyahs)))
+                : 0;
+
             // konsentrasi surah (D7)
             [$topSid, $topShare] = $this->topSurah($ayahs, $nab);
 
@@ -321,26 +444,23 @@ class QseBuildStats extends Command
             $rows[] = [
                 'corpus_build_id' => $buildId, 'variant' => $variant, 'unit' => 'ayah',
                 'item_type' => $itemType, 'item_a' => $a, 'item_b' => $b,
-                'n_a' => $na, 'n_b' => $nb, 'n_ab' => $nab, 'n_total' => $N,
+                'n_a' => $na, 'n_b' => $nb, 'n_ab' => $nab,
+                'n_ab_first_instance' => $nabFirstInstance, // A6
+                'n_total' => $N,
                 'expected' => $expected, 'pmi' => $pmi, 'g2' => $g2,
                 'p_permutation' => $p, 'fdr_significant' => 0,
                 'top_surah_id' => $topSid, 'top_surah_share' => $topShare,
             ];
         }
 
-        // BH-FDR pada keluarga (D6)
+        // BH-FDR pada keluarga (D6) — lihat bhFdrSignificantIndices() utk logika testable
         $famSize = count($fdrFamily);
         if ($famSize > 0) {
             asort($fdrFamily); // urut p menaik
-            $rank = 0; $threshold = 0.0; $passRanks = [];
-            $sorted = array_values($fdrFamily);
+            $sortedP = array_values($fdrFamily);
             $keys = array_keys($fdrFamily);
-            foreach ($sorted as $r => $pval) {
-                $crit = (($r + 1) / $famSize) * self::FDR_Q;
-                if ($pval <= $crit) $threshold = $r; // simpan rank terbesar yang lolos
-            }
-            // semua dengan rank <= threshold signifikan
-            for ($r = 0; $r <= $threshold; $r++) {
+            $sigIdx = $this->bhFdrSignificantIndices($sortedP, self::FDR_Q);
+            foreach ($sigIdx as $r) {
                 $rows[$keys[$r]]['fdr_significant'] = 1;
             }
         }
@@ -351,10 +471,66 @@ class QseBuildStats extends Command
         foreach (array_chunk($rows, 500) as $chunk) {
             // insertOrIgnore sebagai jaring pengaman: kanonikalisasi strcmp sudah
             // menjamin keunikan, tapi ignore mencegah crash build panjang bila ada
-            // edge-case tak terduga — baris terlewat akan tampak di hitungan akhir.
+            // edge-case tak terduga — baris terlewat DIAUDIT di bawah (T4), bukan
+            // dibiarkan hilang tanpa jejak.
             DB::table('collocations')->insertOrIgnore($chunk);
         }
-        $this->line('   pasangan: ' . count($rows) . " (keluarga FDR: {$famSize})");
+
+        // T4 (REVIEW-ANALYST-01): insertOrIgnore bisa menelan baris tanpa jejak.
+        // Bandingkan jumlah baris yang DIMAKSUD vs yang BENAR-BENAR tersimpan.
+        $inserted = DB::table('collocations')->where('corpus_build_id', $buildId)
+            ->where('variant', $variant)->where('item_type', $itemType)->count();
+        if ($inserted !== count($rows)) {
+            $missing = count($rows) - $inserted;
+            $this->warn("   PERINGATAN T4: {$missing} baris tidak tersisip (diminta "
+                . count($rows) . ", tersimpan {$inserted}) — kemungkinan tabrakan "
+                . 'uq_pair yang tak terduga. Dicatat ke data_flags.');
+            DB::table('data_flags')->insert([
+                'flaggable_type' => 'corpus_builds', 'flaggable_id' => $buildId,
+                'field_name' => 'collocations_insert_gap',
+                'current_value' => (string) $inserted,
+                'proposed_value' => (string) count($rows),
+                'reason' => "variant={$variant} item_type={$itemType}: diminta " . count($rows)
+                    . " baris, tersisip {$inserted} ({$missing} hilang via insertOrIgnore). "
+                    . 'Periksa kanonikalisasi pasangan (T4, REVIEW-ANALYST-01).',
+                'proposed_by' => 1, 'status' => 'open', 'created_at' => now(),
+            ]);
+        }
+
+        $this->line('   pasangan: ' . count($rows) . " (keluarga FDR: {$famSize})"
+            . ($inserted !== count($rows) ? " [GAP: {$inserted} tersisip]" : ''));
+
+        return $famSize;
+    }
+
+    /**
+     * BH-FDR (D6) — mengembalikan indeks (0-based, terhadap p-value TERURUT MENAIK)
+     * yang dinyatakan signifikan.
+     *
+     * BUG LAMA (ditemukan REVIEW-ANALYST-01 T1): threshold awal 0.0 menyebabkan
+     * loop "for ($r=0; $r<=$threshold; $r++)" SELALU jalan minimal 1x walau
+     * TIDAK ADA p yang lolos kriteria BH — menandai satu positif palsu per
+     * keluarga tanpa pemenang sejati. Diperbaiki: threshold awal -1, dan method
+     * ini dipisah supaya bisa diuji langsung tanpa membangun seluruh pipeline
+     * (lihat tests/Unit/BhFdrTest.php).
+     *
+     * @param  array<float>  $sortedPvalues  p-value, SUDAH terurut menaik
+     * @return array<int>  indeks yang signifikan (bisa kosong)
+     */
+    public function bhFdrSignificantIndices(array $sortedPvalues, float $q): array
+    {
+        $famSize = count($sortedPvalues);
+        if ($famSize === 0) {
+            return [];
+        }
+        $threshold = -1; // T1 fix: -1, BUKAN 0.0 — lihat dokblok di atas
+        foreach ($sortedPvalues as $r => $pval) {
+            $crit = (($r + 1) / $famSize) * $q;
+            if ($pval <= $crit) {
+                $threshold = $r;
+            }
+        }
+        return $threshold < 0 ? [] : range(0, $threshold);
     }
 
     private function isPreregistered(string $a, string $b): bool
@@ -481,6 +657,7 @@ class QseBuildStats extends Command
             $rows[] = [
                 'corpus_build_id' => $buildId, 'variant' => $variant,
                 'item_type' => $itemType, 'item_ref' => $item,
+                'n_ayat' => $total, // A4: D/DP tidak dapat diinterpretasi tanpa ini
                 'juilland_d' => $juilland, 'dp' => $dp,
                 'top_surah_id' => $topSid, 'top_surah_share' => $topShare,
             ];

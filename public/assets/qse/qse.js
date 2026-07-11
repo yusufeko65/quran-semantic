@@ -86,13 +86,29 @@
       const warn = c.concentration_warning
         ? `<span class="colloc-warn" title="Pola terkonsentrasi di sedikit surah — jangan digeneralisasi">⚠ terkonsentrasi${c.top_surah_share != null ? ' ' + Math.round(c.top_surah_share * 100) + '%' : ''}</span>`
         : '';
-      const fdr = c.fdr_significant
-        ? '<span class="colloc-fdr">signifikan (FDR)</span>'
-        : '<span class="colloc-fdr insig">tidak signifikan (FDR)</span>';
+
+      // G² TIDAK PERNAH tampil tanpa `direction` di sebelahnya (HANDOFF-03 dari PM,
+      // rujukan REVIEW-ANALYST-01 T3: G² buta arah — pasangan yang tidak pernah
+      // muncul bersama pun bisa menghasilkan G² positif). `direction` belum ada
+      // di kontrak payload saat ini, jadi G² ditahan, bukan ditampilkan berspekulasi.
+      const hasDirection = c.direction === 'association' || c.direction === 'avoidance' || c.direction === 'neutral';
+      const g2Part = hasDirection
+        ? ` · G²=${esc(c.g2)} (${esc(c.direction)})`
+        : ` · G² ditahan (menunggu field \u201cdirection\u201d)`;
+
+      // fdr_significant SENGAJA TIDAK dirender sama sekali — T1 (bug threshold FDR)
+      // belum diperbaiki, berlaku surut (K2). Jika field ini ada di payload, blok
+      // signifikansinya yang disembunyikan, bukan seluruh baris kolokasi.
+
+      const isAvoidance = c.direction === 'avoidance';
+      const label = isAvoidance
+        ? `<span class="colloc-avoidance-tag">pola saling menghindar</span>`
+        : '';
+
       return `<div class="colloc-row">` +
-        `<div class="colloc-top"><span class="cp">${esc(c.partner)}</span>${warn}</div>` +
+        `<div class="colloc-top"><span class="cp">${esc(c.partner)}</span>${label}${warn}</div>` +
         `<span class="wd-mono">n=${esc(c.n_ab)} · expected=${esc(c.expected)} · ${c.ratio != null ? esc(c.ratio) + '×' : '–'}` +
-        ` · PMI=${esc(c.pmi)} · G²=${esc(c.g2)}${c.p_permutation != null ? ' · p=' + esc(c.p_permutation) : ''}</span> ${fdr}` +
+        ` · PMI=${esc(c.pmi)}${g2Part}${c.p_permutation != null ? ' · p=' + esc(c.p_permutation) : ''}</span>` +
         `</div>`;
     };
 
@@ -108,7 +124,11 @@
         variantBlock('Formula dikurangi (basmalah dkk. dibuang)', reduced) +
         `</div>`;
       html += disclaimer(stats.status_epistemik ||
-        'PMI & G² adalah pola statistik penggunaan, bukan makna. Selalu dibaca berdampingan, tidak sendirian.');
+        'PMI adalah pola statistik penggunaan, bukan makna. G² ditahan sampai setiap ' +
+        'pasangan menyertakan arah (asosiasi/menghindar/netral) — tanpa itu, G² bisa ' +
+        'menyesatkan untuk pasangan yang justru tidak pernah muncul bersama.');
+      html += `<p class="method-note colloc-hold-note">Signifikansi statistik (FDR) belum ` +
+        `ditampilkan — menunggu perbaikan ambang batas di pipeline (T1).</p>`;
     } else {
       html += `<div class="wd-empty">` +
         `<p class="wd-empty-label">Statistik kolokasi (Tier 0) — belum tersedia</p>` +

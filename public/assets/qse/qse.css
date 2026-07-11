@@ -663,17 +663,16 @@ h1.page-title {
   --tj-madd_muttasil:        #C2410C;
 }
 
-/* ---- 2. Segmen tajwid: latar tinta tipis, bukan sekadar warna teks ----
-   Memakai background (bukan color saja) supaya anotasi terlihat sebagai
-   satu larik yang disorot, konsisten dengan instruksi "warna terlihat
-   kontinu melintasi spasi" untuk anotasi lintas-kata. */
+/* ---- 2. Segmen tajwid: warna teks langsung, penuh (bukan latar transparan) ---- */
 .tj-seg {
-  border-radius: 3px;
-  padding: 0 0.03em;
-  transition: background 0.15s ease;
+  transition: color 0.15s ease;
 }
-.mushaf-text.tajwid-on .tj-seg { background: color-mix(in srgb, var(--tj-color, transparent) 22%, transparent); }
-.mushaf-text:not(.tajwid-on) .tj-seg { background: none; border-radius: 0; }
+.mushaf-text.tajwid-on .tj-seg {
+  color: color-mix(in srgb, var(--tj-color, transparent) 100%, transparent);
+}
+.mushaf-text:not(.tajwid-on) .tj-seg {
+  color: inherit;
+}
 
 .tj-hamzat_wasl          { --tj-color: var(--tj-hamzat_wasl); }
 .tj-lam_shamsiyyah       { --tj-color: var(--tj-lam_shamsiyyah); }
@@ -694,20 +693,17 @@ h1.page-title {
 .tj-madd_munfasil        { --tj-color: var(--tj-madd_munfasil); }
 .tj-madd_muttasil        { --tj-color: var(--tj-madd_muttasil); }
 
-/* ---- 3. Anotasi lintas-kata: potong sisi yang bukan is_start/is_end,
-   lalu "bocorkan" sedikit latar ke celah spasi supaya terlihat menyatu ----
-   Logical properties (start/end mengikuti dir="rtl" pada container). */
-.tj-cut-lead {
-  border-start-start-radius: 0;
-  border-end-start-radius: 0;
-  margin-inline-start: -0.14em;
-  padding-inline-start: 0.14em;
-}
+/* ---- 3. Anotasi lintas-kata (spans_words) ----
+   Dulu tj-cut-lead/tj-cut-trail memotong border-radius & membocorkan
+   latar ke celah spasi supaya KOTAK LATAR terlihat menyatu. Sekarang
+   tajwid pakai warna teks polos (tanpa kotak latar), jadi trik itu
+   sudah tidak relevan — warna glif tetap konsisten tanpa perlu jahitan
+   visual. Kelas tetap dipasang oleh helper Blade (untuk data-tj-group
+   & kemungkinan pemakaian styling lain di masa depan) tapi sengaja
+   tidak diberi efek visual tambahan di sini. */
+.tj-cut-lead,
 .tj-cut-trail {
-  border-start-end-radius: 0;
-  border-end-end-radius: 0;
-  margin-inline-end: -0.14em;
-  padding-inline-end: 0.14em;
+  /* sengaja kosong — lihat catatan di atas */
 }
 
 /* ---- 4. Legend 18-item: grid rapat agar tetap ringkas ---- */
@@ -752,3 +748,9 @@ h1.page-title {
   font-family: var(--font-mono); font-size: 0.62rem; color: var(--verdict-sync);
 }
 .colloc-fdr.insig { color: var(--ink-faint); }
+.colloc-avoidance-tag {
+  font-family: var(--font-mono); font-size: 0.62rem; color: var(--rose);
+  background: color-mix(in srgb, var(--rose) 12%, transparent);
+  padding: 0.1rem 0.4rem; border-radius: 999px;
+}
+.colloc-hold-note { margin-top: 0.5rem !important; }

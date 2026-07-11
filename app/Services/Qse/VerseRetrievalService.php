@@ -130,11 +130,22 @@ class VerseRetrievalService
                 ->map(fn (Collocation $c) => [
                     'partner'         => $c->item_a === $itemRef ? $c->item_b : $c->item_a,
                     'n_ab'            => $c->n_ab,
+                    // A6/§4 butir 8: dekomposisi WAJIB untuk formula_reduced — dari
+                    // n_ab ini, berapa yang bertahan HANYA karena instance pertama
+                    // formula dipertahankan (bukan pemakaian genuin di luar formula).
+                    'n_ab_first_instance' => $variant === 'formula_reduced' ? $c->n_ab_first_instance : null,
+                    'n_ab_non_formulaik'  => $variant === 'formula_reduced' ? ($c->n_ab - $c->n_ab_first_instance) : null,
                     'expected'        => round($c->expected, 2),
                     'ratio'           => $c->expected > 0 ? round($c->n_ab / $c->expected, 1) : null,
                     'pmi'             => $c->pmi !== null ? round($c->pmi, 2) : null, // §4: PMI+G² berdampingan
                     'g2'              => round($c->g2, 1),
-                    'p_permutation'   => $c->p_permutation,
+                    // §4 butir 6 (T3, REVIEW-ANALYST-01): G² buta arah — positif baik
+                    // untuk asosiasi MAUPUN penghindaran. Arah WAJIB eksplisit dari
+                    // n_ab vs expected. Pasangan 'avoidance' TIDAK boleh disebut
+                    // "kolokasi" oleh UI walau G²-nya besar (jebakan TC#9).
+                    'direction'       => $c->n_ab > $c->expected ? 'association'
+                        : ($c->n_ab < $c->expected ? 'avoidance' : 'neutral'),
+                    'p_permutation'   => $c->p_permutation, // NULL bila n_ab=0: "uji arah-asosiasi tak berlaku" (D6-B)
                     'fdr_significant' => (bool) $c->fdr_significant,
                     'top_surah_id'    => $c->top_surah_id,
                     'top_surah_share' => $c->top_surah_share !== null ? round($c->top_surah_share, 3) : null,
@@ -158,16 +169,23 @@ class VerseRetrievalService
             'corpus_build_id' => $build,             // §4 butir 5: auditabilitas
             'collocations'    => $variants,          // §4 butir 3: dua varian berdampingan
             'dispersion'      => $disp ? [
+                'n_ayat'          => $disp->n_ayat, // A4/§4 butir 7: D/DP tak terinterpretasi tanpa ini
                 'juilland_d'      => $disp->juilland_d !== null ? round($disp->juilland_d, 3) : null,
                 'dp'              => $disp->dp !== null ? round($disp->dp, 3) : null,
                 'top_surah_id'    => $disp->top_surah_id,
                 'top_surah_share' => $disp->top_surah_share !== null ? round($disp->top_surah_share, 3) : null,
                 'note'            => 'Pola terkonsentrasi di sedikit surah tidak boleh '
                     . 'digeneralisasi se-Al-Qur\'an (Manifest §14).',
+                'sparsity_disclaimer' => 'A5 (SPEC-ANALYST-01): DP/D BELUM dikoreksi sparsity '
+                    . '(k=114 bagian; n_ayat<k membuat DP naik secara struktural). '
+                    . 'Perbandingan DP/D lintas varian DITUNDA sampai dp_excess tersedia — '
+                    . 'dijadwalkan, bukan diabaikan diam-diam (§3).',
             ] : null,
             'status_epistemik' => 'Angka kolokasi adalah data POLA PENGGUNAAN — bukan makna '
-                . '(§14 aturan 3). PMI/rasio = effect size; G² = kekuatan bukti; '
-                . 'keduanya tak pernah tampil sendirian (§4).',
+                . '(§14 aturan 3). PMI/rasio = effect size; G² = kekuatan bukti — TAPI G² '
+                . 'buta arah (positif untuk asosiasi maupun penghindaran). Field `direction` '
+                . 'WAJIB dibaca sebelum menafsirkan G²; pasangan berstatus avoidance TIDAK '
+                . 'boleh disebut "kolokasi" walau G²-nya besar (SPEC-ANALYST-01 §4 butir 6).',
         ];
     }
 
