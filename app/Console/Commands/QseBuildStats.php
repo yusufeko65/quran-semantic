@@ -358,6 +358,27 @@ class QseBuildStats extends Command
         return false;
     }
 
+    /**
+     * n_scope (D4, PUTUSAN-02 §3) untuk formula_reduced: ayat yang TIDAK
+     * gugur PENUH oleh formula (beda dari n_total/D6-E: ayat bisa "tak gugur
+     * penuh" di sini tapi tetap berakhir tanpa item pada n_total, jika kata
+     * tersisa memang tak berlemma/root — itu sebabnya dua kolom terpisah).
+     */
+    private function scopeAfterReduction(array $ayahWords, array $formulaRanges): int
+    {
+        $survive = 0;
+        foreach ($ayahWords as $aid => $ws) {
+            $red = $formulaRanges[$aid] ?? [];
+            if (!$red) { $survive++; continue; }
+            $allCovered = true;
+            foreach ($ws as [$pos]) {
+                if (!$this->inAnyRange($pos, $red)) { $allCovered = false; break; }
+            }
+            if (!$allCovered) $survive++;
+        }
+        return $survive;
+    }
+
     // ============================================================
     // D5+D6 — kolokasi + statistik untuk satu (variant, item_type)
     // ============================================================
@@ -377,6 +398,15 @@ class QseBuildStats extends Command
         // gugur-penuh" (dua hal itu BERBEDA — ayat bisa tak gugur-penuh tapi
         // toh berakhir tanpa item jika kata yang tersisa memang tak berlemma).
         $N = count($sets);
+
+        // n_scope (PUTUSAN-02 §3, kolom BARU — terpisah dari n_total di atas):
+        // cakupan varian per D4 ASLI — raw selalu 6.236 (tanpa pengecualian);
+        // formula_reduced = 6.236 dikurangi ayat yang gugur PENUH oleh formula
+        // (BUKAN "ayat ber-item", itu urusan n_total/D6-E). Dua kolom, dua
+        // pertanyaan berbeda — boleh bernilai beda pada baris yang sama.
+        $nScope = $variant === 'raw'
+            ? count($ayahWords)
+            : $this->scopeAfterReduction($ayahWords, $formulaRanges);
 
         // n_a per item + inverted index item => set(ayah)
         $itemAyahs = []; // item => [ayah_id...]
@@ -446,7 +476,7 @@ class QseBuildStats extends Command
                 'item_type' => $itemType, 'item_a' => $a, 'item_b' => $b,
                 'n_a' => $na, 'n_b' => $nb, 'n_ab' => $nab,
                 'n_ab_first_instance' => $nabFirstInstance, // A6
-                'n_total' => $N,
+                'n_total' => $N, 'n_scope' => $nScope, // PUTUSAN-02 §3
                 'expected' => $expected, 'pmi' => $pmi, 'g2' => $g2,
                 'p_permutation' => $p, 'fdr_significant' => 0,
                 'top_surah_id' => $topSid, 'top_surah_share' => $topShare,
