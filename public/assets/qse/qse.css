@@ -816,6 +816,20 @@ h1.page-title {
   border: 1px solid var(--rule); border-radius: 12px; padding: 0.9rem 0.7rem; text-decoration: none; color: var(--ink);
 }
 .root-result-card:hover { background: var(--paper-panel); }
+
+/* ---- Banner disclaimer epistemik (halaman kemunculan root) ----
+   Sengaja menonjol (bukan footnote kelabu) — pagar §5, isi dirender
+   langsung dari payload BE, tidak ditulis ulang oleh UI. */
+.root-epistemic-banner {
+  background: color-mix(in srgb, var(--rose) 10%, var(--paper-panel));
+  border-left: 3px solid var(--rose);
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  font-size: 0.9rem;
+  color: var(--ink);
+  margin: 1rem 0 2rem;
+  max-width: 680px;
+}
 .root-result-card--static { cursor: default; }
 .root-result-card--static:hover { background: none; }
 .root-ar { font-family: var(--font-arabic); font-size: 1.5rem; }
