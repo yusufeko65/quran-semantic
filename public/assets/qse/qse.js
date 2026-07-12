@@ -277,11 +277,11 @@
       }
       let html = '';
       if (roots.length) {
-        html += '<p class="search-group-label">Root</p>';
+        html += '<p class="search-group-label">Root (ringkasan — belum ada halaman detail)</p>';
         roots.forEach((r) => {
-          html += `<a class="search-item" href="/qse/root/${esc(r.id)}">` +
+          html += `<div class="search-item search-item--static">` +
             `<span class="search-item-ar">${esc(r.arabic)}</span>` +
-            `<span class="wd-mono">${esc(r.transliteration || '')}</span></a>`;
+            `<span class="wd-mono">${esc(r.transliteration || '')}</span></div>`;
         });
       }
       if (words.length) {

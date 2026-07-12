@@ -25,16 +25,20 @@
     @if (($roots->total() ?? 0) > 0)
         <div class="root-result-grid">
             @foreach ($roots as $r)
-                <a href="{{ route('qse.page.roots', $r->id) }}" class="root-result-card">
+                <div class="root-result-card root-result-card--static">
                     <span class="root-ar">{{ $r->arabic }}</span>
                     <span class="root-translit wd-mono">{{ $r->transliteration }}</span>
                     @if (!empty($r->base_meaning))
                         <span class="root-meaning">{{ $r->base_meaning }}</span>
                     @endif
                     <span class="root-occ wd-mono">{{ $r->occurrences_total ?? 0 }} kemunculan</span>
-                </a>
+                </div>
             @endforeach
         </div>
+        <p class="strip-empty">
+            Halaman detail per-root (semua kemunculan + statistik) belum tersedia —
+            kartu di atas menampilkan ringkasan apa adanya, belum bisa diklik-tembus.
+        </p>
         {{ $roots->appends(['sort' => $sort])->links() }}
     @else
         <p class="strip-empty">Daftar root belum bisa dimuat.</p>

@@ -783,6 +783,8 @@ h1.page-title {
   padding: 0.35rem 0.5rem; border-radius: 6px; text-decoration: none; color: var(--ink);
 }
 .search-item:hover, .search-item:focus-visible { background: var(--paper); }
+.search-item--static { cursor: default; }
+.search-item--static:hover { background: none; }
 .search-item-ar { font-family: var(--font-arabic); font-size: 1.1rem; }
 .search-item-all { color: var(--gold); font-family: var(--font-mono); font-size: 0.72rem; justify-content: flex-start; }
 .search-empty { font-size: 0.78rem; color: var(--ink-faint); padding: 0.5rem; margin: 0; }
@@ -814,6 +816,8 @@ h1.page-title {
   border: 1px solid var(--rule); border-radius: 12px; padding: 0.9rem 0.7rem; text-decoration: none; color: var(--ink);
 }
 .root-result-card:hover { background: var(--paper-panel); }
+.root-result-card--static { cursor: default; }
+.root-result-card--static:hover { background: none; }
 .root-ar { font-family: var(--font-arabic); font-size: 1.5rem; }
 .root-translit { font-size: 0.68rem; color: var(--ink-faint); }
 .root-meaning { font-size: 0.76rem; color: var(--ink-soft); }
