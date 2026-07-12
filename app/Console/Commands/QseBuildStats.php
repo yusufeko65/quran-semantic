@@ -199,9 +199,13 @@ class QseBuildStats extends Command
         $results["A8.1b-1 substr_count({$viaSubstring}) ≠ tag_count({$viaTag}), arah-agnostik"]
             = [$viaSubstring !== $viaTag, ['tag' => $viaTag, 'substr' => $viaSubstring]];
 
-        // Klausa 2: collocations.n_a untuk عَزِيز = 101 (kolokasi memang pakai tag)
-        $results["A8.1b-2 collocations.n_a(عَزِيز) = 101"]
-            = [$r3 && (int) $r3->n_a === 101, $r3?->n_a];
+        // Klausa 2 (SADAR-KOLOM, D3-A): kanonikalisasi byte-wise menaruh رَحِيم
+        // sebagai item_a (U+0631 < U+0639), عَزِيز sebagai item_b. Jadi n_a=116
+        // (Rahiim), n_b=101 (Aziz) — BUKAN sebaliknya. Kesalahan sebelumnya:
+        // mengecek $r3->n_a (padahal itu kolom Rahiim, bukan Aziz).
+        $results["A8.1b-2 sadar-kolom: n_b=101(عزيز), n_a=116(رحيم)"]
+            = [$r3 && (int) $r3->n_a === 116 && (int) $r3->n_b === 101,
+               $r3 ? ['n_a' => $r3->n_a, 'n_b' => $r3->n_b] : null];
 
         // A9.1-A9.3 — dua baris pre-registered, pmi NULL, fdr=0
         $r5 = (clone $get)('رَحِيم', 'حَكِيم')->where('variant', 'raw')->first();
