@@ -30,6 +30,9 @@ Route::prefix('qse')->name('qse.page.')->group(function () {
     Route::get('/ayah/{surah}/{number}',   [PageController::class, 'ayah'])
         ->whereNumber(['surah', 'number'])->name('ayah');
     // Handoff UI #1 — halaman statis Panduan Metodologi (tanpa query DB)
+    // Discoverability v2 (QSE-BE-handoff-discoverability-v2.md, Prioritas 1 UI)
+    Route::get('/cari',                    [PageController::class, 'search'])->name('search');
+    Route::get('/akar',                    [PageController::class, 'roots'])->name('roots');
     Route::get('/panduan-metodologi',      [PageController::class, 'metodologi'])->name('metodologi');
     Route::get('/hipotesis',               [PageController::class, 'hypotheses'])->name('hypotheses');
     Route::get('/hipotesis/{hypothesis}',  [PageController::class, 'hypothesis'])->name('hypothesis');

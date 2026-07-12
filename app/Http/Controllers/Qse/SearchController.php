@@ -22,37 +22,44 @@ class SearchController extends Controller
     private const DIACRITICS =
         '/[\x{0610}-\x{061A}\x{064B}-\x{065F}\x{0670}\x{06D6}-\x{06DC}\x{06DF}-\x{06E8}\x{06EA}-\x{06ED}\x{0640}]/u';
 
-    /** GET /qse/api/search?q=...&type=word|root|all */
+    /**
+     * GET /qse/api/search?q=...&limit=5 — dropdown pencarian cepat (header).
+     * Kontrak final v2 (QSE-BE-handoff-discoverability-v2.md, diturunkan dari
+     * kode UI yang sudah jadi): selalu kembalikan roots+words bersamaan,
+     * `limit` mengontrol jumlah tiap kategori (default dipakai UI: 5).
+     * `type` tetap diterima opsional utk pemakai lain (backward-compatible).
+     */
     public function search(Request $request)
     {
         $data = $request->validate([
-            'q'    => ['required', 'string', 'min:1', 'max:100'],
-            'type' => ['nullable', 'in:word,root,all'],
+            'q'     => ['required', 'string', 'min:1', 'max:100'],
+            'type'  => ['nullable', 'in:word,root,all'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
 
-        $q    = trim($data['q']);
-        $type = $data['type'] ?? 'all';
+        $q     = trim($data['q']);
+        $type  = $data['type'] ?? 'all';
+        $limit = (int) ($data['limit'] ?? 5);
         $qNorm = $this->normalize($q);
 
         $result = [];
-
         if ($type === 'root' || $type === 'all') {
-            $result['roots'] = $this->searchRoots($q, $qNorm);
+            $result['roots'] = $this->searchRoots($q, $qNorm, $limit);
         }
         if ($type === 'word' || $type === 'all') {
-            $result['words'] = $this->searchWords($q, $qNorm);
+            $result['words'] = $this->searchWords($q, $qNorm, $limit);
         }
 
         return response()->json($result);
     }
 
-    private function searchRoots(string $q, string $qNorm): array
+    private function searchRoots(string $q, string $qNorm, int $limit = 20): array
     {
         // Cocok pada: arabic (dgn/ tanpa spasi antar huruf), transliterasi.
         $qNoSpace = str_replace(' ', '', $qNorm);
 
         return Root::query()
-            ->select('id', 'arabic', 'transliteration')
+            ->select('id', 'arabic', 'transliteration', 'base_meaning')
             ->withCount('words as occurrences_total')
             ->where(function ($w) use ($q, $qNorm, $qNoSpace) {
                 $w->where('arabic', 'like', "%{$q}%")
@@ -60,7 +67,7 @@ class SearchController extends Controller
                   ->orWhere('transliteration', 'like', "%{$qNorm}%");
             })
             ->orderByDesc('occurrences_total')
-            ->limit(20)
+            ->limit($limit)
             ->get()
             ->map(fn (Root $r) => [
                 'id'                => $r->id,
@@ -70,7 +77,7 @@ class SearchController extends Controller
             ])->all();
     }
 
-    private function searchWords(string $q, string $qNorm): array
+    private function searchWords(string $q, string $qNorm, int $limit = 20): array
     {
         // Prefix match diprioritaskan (exact/prefix cukup utk Fase 2 — handoff).
         return Word::query()
@@ -83,16 +90,19 @@ class SearchController extends Controller
             })
             ->with(['ayah:id,surah_id,number_in_surah', 'ayah.surah:id,transliteration'])
             ->orderByRaw('CHAR_LENGTH(words.text_normalized)') // yg terpendek ~ paling mirip prefix
-            ->limit(30)
+            ->limit($limit * 2) // ambil lebih banyak dulu, unique() bisa memangkas
             ->get()
             ->unique('text_normalized')
-            ->take(20)
+            ->take($limit)
             ->map(fn (Word $w) => [
                 'id'           => $w->id,
                 'text_uthmani' => $w->text_uthmani,
                 'lemma'        => $w->lemma,
                 'ref'          => $w->ayah->surah_id . ':' . $w->ayah->number_in_surah . ':' . $w->position_in_ayah,
                 'surah'        => $w->ayah->surah->transliteration,
+                // §2 handoff v2: anchor #word-{id} utk scroll-to-word (dibangun
+                // menyusul di sisi UI — kita hanya wajib mengirim URL-nya).
+                'url'          => "/qse/ayah/{$w->ayah->surah_id}/{$w->ayah->number_in_surah}#word-{$w->id}",
             ])->values()->all();
     }
 

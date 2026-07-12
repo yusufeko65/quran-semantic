@@ -25,7 +25,7 @@
     @if (($roots->total() ?? 0) > 0)
         <div class="root-result-grid">
             @foreach ($roots as $r)
-                <a href="{{ route('qse.page.root', $r->id) }}" class="root-result-card">
+                <a href="{{ route('qse.page.roots', $r->id) }}" class="root-result-card">
                     <span class="root-ar">{{ $r->arabic }}</span>
                     <span class="root-translit wd-mono">{{ $r->transliteration }}</span>
                     @if (!empty($r->base_meaning))
