@@ -29,8 +29,16 @@
         </a>
         <nav class="site-nav">
             <a href="{{ route('qse.page.home') }}" class="{{ request()->routeIs('qse.page.home') ? 'active' : '' }}">Surah</a>
+            <a href="{{ route('qse.page.roots') }}" class="{{ request()->routeIs('qse.page.roots') ? 'active' : '' }}">Root</a>
             <a href="{{ route('qse.page.hypotheses') }}" class="{{ request()->routeIs('qse.page.hypotheses') ? 'active' : '' }}">Jurnal Hipotesis</a>
             <a href="{{ route('qse.page.metodologi') }}" class="{{ request()->routeIs('qse.page.metodologi') ? 'active' : '' }}">Panduan Metodologi</a>
+
+            <form class="search-box" role="search" action="{{ route('qse.page.search') }}" method="get" autocomplete="off">
+                <input type="search" name="q" id="global-search-input" placeholder="Cari kata atau root…"
+                       aria-label="Cari kata atau root" value="{{ request('q') }}">
+                <div class="search-dropdown" id="search-dropdown" hidden></div>
+            </form>
+
             <button type="button" id="theme-toggle" class="theme-toggle" aria-pressed="false">
                 Tampilan: <span class="state">Modern</span>
             </button>

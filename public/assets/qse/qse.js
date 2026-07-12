@@ -253,8 +253,79 @@
     btn.addEventListener('click', () => apply(current() === 'manuscript' ? 'modern' : 'manuscript'));
   }
 
+  /* ---- Pencarian global (dropdown cepat di header) ----
+     Endpoint: GET /qse/api/search?q=&limit=5 -> { words: [...], roots: [...] }
+     Debounced, dibatalkan tiap ketikan baru. Enter/klik "lihat semua hasil"
+     mengarah ke halaman pencarian penuh (server-rendered, tanpa JS). */
+  function initHeaderSearch() {
+    const input = document.getElementById('global-search-input');
+    const dropdown = document.getElementById('search-dropdown');
+    if (!input || !dropdown) return;
+
+    let debounceTimer = null;
+    let activeController = null;
+
+    const closeDropdown = () => { dropdown.hidden = true; dropdown.innerHTML = ''; };
+
+    const renderDropdown = (data, q) => {
+      const roots = data.roots || [];
+      const words = data.words || [];
+      if (!roots.length && !words.length) {
+        dropdown.innerHTML = `<p class="search-empty">Tidak ada hasil untuk "${esc(q)}".</p>`;
+        dropdown.hidden = false;
+        return;
+      }
+      let html = '';
+      if (roots.length) {
+        html += '<p class="search-group-label">Root</p>';
+        roots.forEach((r) => {
+          html += `<a class="search-item" href="/qse/root/${esc(r.id)}">` +
+            `<span class="search-item-ar">${esc(r.arabic)}</span>` +
+            `<span class="wd-mono">${esc(r.transliteration || '')}</span></a>`;
+        });
+      }
+      if (words.length) {
+        html += '<p class="search-group-label">Kata</p>';
+        words.forEach((w) => {
+          html += `<a class="search-item" href="${esc(w.url || '#')}">` +
+            `<span class="search-item-ar">${esc(w.text_uthmani)}</span>` +
+            `<span class="wd-mono">${esc(w.ref || '')}</span></a>`;
+        });
+      }
+      html += `<a class="search-item search-item-all" href="/qse/cari?q=${encodeURIComponent(q)}">Lihat semua hasil untuk "${esc(q)}" →</a>`;
+      dropdown.innerHTML = html;
+      dropdown.hidden = false;
+    };
+
+    input.addEventListener('input', () => {
+      const q = input.value.trim();
+      clearTimeout(debounceTimer);
+      if (activeController) activeController.abort();
+      if (q.length < 2) { closeDropdown(); return; }
+
+      debounceTimer = setTimeout(async () => {
+        activeController = new AbortController();
+        try {
+          const res = await fetch(`/qse/api/search?q=${encodeURIComponent(q)}&limit=5`, {
+            headers: { Accept: 'application/json' }, signal: activeController.signal,
+          });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          renderDropdown(await res.json(), q);
+        } catch (err) {
+          if (err.name !== 'AbortError') closeDropdown();
+        }
+      }, 250);
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!dropdown.contains(e.target) && e.target !== input) closeDropdown();
+    });
+    input.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDropdown(); });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     initThemeToggle();
+    initHeaderSearch();
 
     const panel = document.getElementById('word-detail');
     if (!panel) return;

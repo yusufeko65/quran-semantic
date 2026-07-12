@@ -754,3 +754,79 @@ h1.page-title {
   padding: 0.1rem 0.4rem; border-radius: 999px;
 }
 .colloc-hold-note { margin-top: 0.5rem !important; }
+
+/* ============================================================
+   QSE — Discoverability (pencarian + browser root)
+   [TAMBAHKAN DI AKHIR qse.css]
+   ============================================================ */
+
+/* ---- Kotak pencarian global (header) ---- */
+.search-box { position: relative; flex: 1 1 220px; max-width: 320px; }
+.search-box input[type="search"] {
+  width: 100%; font-family: var(--font-mono); font-size: 0.78rem;
+  color: var(--ink); background: var(--paper); border: 1px solid var(--rule-strong);
+  border-radius: 8px; padding: 0.4rem 0.7rem;
+}
+.search-box input[type="search"]:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+
+.search-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20;
+  background: var(--paper-panel); border: 1px solid var(--rule-strong); border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12); padding: 0.4rem; max-height: 60vh; overflow-y: auto;
+}
+.search-group-label {
+  font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-faint); margin: 0.4rem 0.4rem 0.2rem;
+}
+.search-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
+  padding: 0.35rem 0.5rem; border-radius: 6px; text-decoration: none; color: var(--ink);
+}
+.search-item:hover, .search-item:focus-visible { background: var(--paper); }
+.search-item-ar { font-family: var(--font-arabic); font-size: 1.1rem; }
+.search-item-all { color: var(--gold); font-family: var(--font-mono); font-size: 0.72rem; justify-content: flex-start; }
+.search-empty { font-size: 0.78rem; color: var(--ink-faint); padding: 0.5rem; margin: 0; }
+
+/* ---- Halaman pencarian penuh ---- */
+.search-box--page { max-width: 480px; display: flex; gap: 0.5rem; margin: 1rem 0 2rem; }
+.search-box--page input { flex: 1; border-radius: 8px; padding: 0.55rem 0.8rem; font-size: 0.9rem; }
+.search-box--page button {
+  font-family: var(--font-mono); font-size: 0.78rem; color: var(--paper);
+  background: var(--gold); border: none; border-radius: 8px; padding: 0 1rem; cursor: pointer;
+}
+
+.search-section { margin-bottom: 2.4rem; }
+.search-section-title { font-family: var(--font-display); font-size: 1.05rem; margin-bottom: 0.8rem; }
+
+.word-result-list { display: flex; flex-direction: column; gap: 6px; }
+.word-result-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  border: 1px solid var(--rule); border-radius: 10px; padding: 0.6rem 0.9rem; text-decoration: none; color: var(--ink);
+}
+.word-result-row:hover { background: var(--paper-panel); }
+.word-result-ar { font-family: var(--font-arabic); font-size: 1.3rem; }
+.word-result-meta { font-size: 0.7rem; color: var(--ink-faint); }
+
+/* ---- Kartu root (dipakai di hasil pencarian & browser root) ---- */
+.root-result-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.root-result-card {
+  display: flex; flex-direction: column; gap: 0.2rem; text-align: center;
+  border: 1px solid var(--rule); border-radius: 12px; padding: 0.9rem 0.7rem; text-decoration: none; color: var(--ink);
+}
+.root-result-card:hover { background: var(--paper-panel); }
+.root-ar { font-family: var(--font-arabic); font-size: 1.5rem; }
+.root-translit { font-size: 0.68rem; color: var(--ink-faint); }
+.root-meaning { font-size: 0.76rem; color: var(--ink-soft); }
+.root-occ { font-size: 0.64rem; color: var(--ink-faint); margin-top: 0.2rem; }
+
+/* ---- Browser root: toggle urutan ---- */
+.sort-toggle { display: flex; gap: 0.5rem; margin: 1rem 0 1.4rem; }
+.sort-toggle a {
+  font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-soft);
+  border: 1px solid var(--rule-strong); border-radius: 999px; padding: 0.3rem 0.8rem; text-decoration: none;
+}
+.sort-toggle a.active { background: var(--gold); color: var(--paper); border-color: var(--gold); }
+
+@media (max-width: 780px) {
+  .search-box { order: 10; flex-basis: 100%; max-width: none; }
+}
