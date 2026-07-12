@@ -184,11 +184,24 @@ class QseBuildStats extends Command
         $r4 = (clone $get)('عَزِيز', 'رَحِيم')->where('variant', 'formula_reduced')->first();
         $results['A7.2 TC#7 formula_reduced n_ab < 14'] = [$r4 && $r4->n_ab < 14, $r4];
 
-        // A8.1 — kanari substring vs tag (n_a kolokasi harus = via_tag, BUKAN via_substring)
-        $viaTag = DB::table('words')->where('lemma', 'عَزِيز')->distinct('ayah_id')->count('ayah_id');
+        // A8.1b (SPEC-02 b.142-148, HANDOFF-09) — DUA klausa ARAH-AGNOSTIK persis
+        // seperti teks spec, bukan satu asersi gabungan yang diam-diam mengandaikan
+        // arah. Diagnosis PM: versi lama membandingkan dgn asumsi "substring
+        // over-count" — keliru, data sebenarnya substring UNDER-count (99 < 101,
+        // selisih dua jamak اعزة di 5:54 & 27:34). Asersi kini HANYA memeriksa
+        // ketidaksamaan (≠), tidak pernah arah (> atau <).
+        $viaTag = DB::table('words')
+            ->whereRaw('lemma COLLATE utf8mb4_bin = ?', ['عَزِيز'])
+            ->distinct('ayah_id')->count('ayah_id');
         $viaSubstring = DB::table('ayahs')->where('text_normalized', 'like', '%عزيز%')->count();
-        $matchesTag = $r3 && (int) $r3->n_a === $viaTag;
-        $results["A8.1 kanari n_a={$viaTag}(tag) vs {$viaSubstring}(substring), kolokasi pakai tag"] = [$matchesTag && $viaTag !== $viaSubstring, null];
+
+        // Klausa 1: substr_count ≠ tag_count (arah-agnostik — TIDAK peduli mana lebih besar)
+        $results["A8.1b-1 substr_count({$viaSubstring}) ≠ tag_count({$viaTag}), arah-agnostik"]
+            = [$viaSubstring !== $viaTag, ['tag' => $viaTag, 'substr' => $viaSubstring]];
+
+        // Klausa 2: collocations.n_a untuk عَزِيز = 101 (kolokasi memang pakai tag)
+        $results["A8.1b-2 collocations.n_a(عَزِيز) = 101"]
+            = [$r3 && (int) $r3->n_a === 101, $r3?->n_a];
 
         // A9.1-A9.3 — dua baris pre-registered, pmi NULL, fdr=0
         $r5 = (clone $get)('رَحِيم', 'حَكِيم')->where('variant', 'raw')->first();
@@ -325,6 +338,41 @@ class QseBuildStats extends Command
                 ]);
                 if (!$isFirst) $ranges[$aid][] = [$s, $e];
             }
+        }
+
+        // (3) REKONSILIASI LINTAS-DETEKTOR (PUTUSAN-03 §5a bullet 2 — kelas
+        // TERPISAH dari T9; T9 = n-gram bersarang DI DALAM satu jenis detektor,
+        // sudah diperbaiki di atas via disjoint-longest-match. Ini soal DUA
+        // JENIS detektor independen (full_ayah vs verse_final_ngram) yang bisa
+        // punya cakupan "instans pertama" berbeda untuk konten yang beririsan
+        // — kasus 26:108: identik penuh dengan 7 ayat lain DI Asy-Syu'ara
+        // (full_ayah bilang "keep", ia instans pertama kelompoknya SENDIRI),
+        // tapi frasa 4-katanya JUGA cocok pola verse_final_ngram yang muncul
+        // lebih dulu di 3:50 (ngram bilang "reduce").
+        //
+        // VERIFIKASI (empiris, 4 kasus ditemukan di korpus): union rentang
+        // SUDAH benar mereduksi kata-katanya (range dari ngram tetap masuk
+        // $ranges terlepas dari status full_ayah) — n_ab/E/PMI/G² TIDAK
+        // terdampak. Yang salah HANYA firstInstanceAyahs: ayat tsb tercatat
+        // "instans pertama global" (via full_ayah) padahal isinya jua
+        // tereduksi (via ngram) — pertentangan metadata yang mengotori A6
+        // (n_ab_first_instance harus mustahil dobel-arti begini).
+        //
+        // Aturan perbaikan (general, bukan hardcode 4 kasus): ayat HANYA
+        // instans-pertama-global sejati jika TIDAK ADA rentang tereduksi
+        // dari detektor manapun. Jika $ranges[$aid] terisi (oleh detektor
+        // manapun), ia BUKAN yang pertama — cabut dari firstInstanceAyahs.
+        $crossTypeConflicts = 0;
+        foreach (array_keys($firstInstanceAyahs) as $aid) {
+            if (isset($ranges[$aid]) && !empty($ranges[$aid])) {
+                unset($firstInstanceAyahs[$aid]);
+                $crossTypeConflicts++;
+            }
+        }
+        if ($crossTypeConflicts > 0) {
+            $this->warn("   Rekonsiliasi lintas-detektor: {$crossTypeConflicts} ayat "
+                . 'dicabut dari firstInstanceAyahs (klaim "instans pertama" bertentangan '
+                . 'dgn rentang tereduksi dari detektor lain — PUTUSAN-03 §5a).');
         }
 
         return [$ranges, $firstInstanceAyahs];
