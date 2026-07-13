@@ -163,13 +163,16 @@ class QseBuildStats extends Command
             && abs($r->g2 - 538.18725) < 0.001 && (int) $r->fdr_significant === 1;
         $results['A6.1 TC#6 raw (A14: n_ab=72,E=1.698198,PMI=5.40592,G²=538.18725,fdr=1)'] = [$pass, $r];
 
-        // A6.2 — baris TC#6 pada formula_reduced ADA. Nilai numerik TIDAK dikunci
-        // di sini: T9 (n-gram bersarang) baru diperbaiki sesi ini: formula lama
-        // (116, tercemar double-count) -> formula baru (disjoint longest-match).
-        // Analyst mengunci angka final setelah build produksi + konfirmasi (A6
-        // note: "nilai lama berstatus BATAS ATAS, bukan target").
+        // A6.2 — TC#6 formula_reduced. DIKUNCI NUMERIK PENUH (D6-E FINAL,
+        // Analyst build 7, cross-check independen via query formula_occurrences
+        // mentah — cocok persis dgn pipeline: n_a=40,n_b=53,n_ab=21).
         $r2 = (clone $get)('غَفُور', 'رَحِيم')->where('variant', 'formula_reduced')->first();
-        $results['A6.2 TC#6 baris formula_reduced ada (nilai numerik menunggu kunci Analyst pasca-T9)'] = [$r2 !== null, $r2];
+        $pass62 = $r2 && $r2->n_ab == 21 && (int) $r2->n_a === 40 && (int) $r2->n_b === 53
+            && abs($r2->expected - 0.346179) < 0.0005
+            && abs($r2->pmi - 5.922727) < 0.0005
+            && abs($r2->g2 - 153.97118) < 0.001
+            && (int) $r2->n_ab_first_instance === 6;
+        $results['A6.2 TC#6 formula_reduced (D6-E FINAL: n_a=40,n_b=53,n_ab=21,E=0.346179,PMI=5.922727,G²=153.97118,n_ab_fi=6)'] = [$pass62, $r2];
 
         // A7.1 — TC#7 raw. Target DIKUNCI ULANG A14 (N=6216).
         $r3 = (clone $get)('عَزِيز', 'رَحِيم')->where('variant', 'raw')->first();
@@ -179,10 +182,15 @@ class QseBuildStats extends Command
             && (int) $r3->top_surah_id === 26 && abs($r3->top_surah_share - 0.6429) < 0.001;
         $results['A7.1 TC#7 raw (A14: n_ab=14,E=1.884813,PMI=2.892933,G²=34.81999,fdr=1,surah=26,share=0.643)'] = [$pass7, $r3];
 
-        // A7.2 — formula_reduced n_ab < 14 (asersi ARAH, tidak bergantung nilai N —
-        // tetap berlaku pasca-T9 karena refrain Asy-Syu'ara tetap terdedup).
+        // A7.2 — TC#7 formula_reduced. DIKUNCI NUMERIK PENUH (D6-E FINAL).
         $r4 = (clone $get)('عَزِيز', 'رَحِيم')->where('variant', 'formula_reduced')->first();
-        $results['A7.2 TC#7 formula_reduced n_ab < 14'] = [$r4 && $r4->n_ab < 14, $r4];
+        $pass72 = $r4 && $r4->n_ab == 2 && (int) $r4->n_a === 50 && (int) $r4->n_b === 53
+            && abs($r4->expected - 0.432724) < 0.0005
+            && $r4->pmi !== null && abs($r4->pmi - 2.208482) < 0.0005
+            && abs($r4->g2 - 3.08635) < 0.001
+            && (int) $r4->n_ab_first_instance === 1
+            && $r4->n_ab < 14; // arah tetap dipertahankan sbg sanity check tambahan
+        $results['A7.2 TC#7 formula_reduced (D6-E FINAL: n_a=50,n_b=53,n_ab=2,E=0.432724,PMI=2.208482,G²=3.08635,n_ab_fi=1)'] = [$pass72, $r4];
 
         // A8.1b (SPEC-02 b.142-148, HANDOFF-09) — DUA klausa ARAH-AGNOSTIK persis
         // seperti teks spec, bukan satu asersi gabungan yang diam-diam mengandaikan
