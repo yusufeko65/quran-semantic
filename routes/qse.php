@@ -33,6 +33,8 @@ Route::prefix('qse')->name('qse.page.')->group(function () {
     // Discoverability v2 (QSE-BE-handoff-discoverability-v2.md, Prioritas 1 UI)
     Route::get('/cari',                    [PageController::class, 'search'])->name('search');
     Route::get('/akar',                    [PageController::class, 'roots'])->name('roots');
+    Route::get('/root/{id}',               [PageController::class, 'root'])
+        ->whereNumber('id')->name('root');
     Route::get('/panduan-metodologi',      [PageController::class, 'metodologi'])->name('metodologi');
     Route::get('/hipotesis',               [PageController::class, 'hypotheses'])->name('hypotheses');
     Route::get('/hipotesis/{hypothesis}',  [PageController::class, 'hypothesis'])->name('hypothesis');

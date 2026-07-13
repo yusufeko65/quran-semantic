@@ -20,6 +20,19 @@ use App\Services\Qse\VerseRetrievalService;
  */
 class RootController extends Controller
 {
+    // Konstanta publik (BUKAN diulang-tulis di PageController) — satu sumber
+    // kebenaran teks, dipakai IDENTIK oleh endpoint JSON (di sini) dan halaman
+    // Blade (PageController::root()). UI: "merender apa adanya, tidak menulis
+    // ulang" — konstanta ini yang menjamin itu secara struktural, bukan disiplin.
+    public const EPISTEMIC_DISCLAIMER = 'Kata-kata ini berbagi root secara morfologis '
+        . '(pengelompokan Quranic Arabic Corpus). Berbagi root TIDAK berarti '
+        . 'berbagi makna — root dapat mencakup beberapa keluarga semantik '
+        . 'berbeda (Manifest §5; temuan proyek: أَرْحام memiliki profil '
+        . 'kolokasi berbeda dari root ر ح م yang sama).';
+
+    public const STATISTICS_STATUS = 'DITANGGUHKAN — menunggu spec presentasi dari '
+        . 'Analyst (root ≠ lemma, risiko salah-atribusi; PUTUSAN-05 §2b).';
+
     public function show(Root $root, VerseRetrievalService $retrieval)
     {
         return response()->json([
@@ -27,16 +40,11 @@ class RootController extends Controller
             'occurrences' => $retrieval->byRoot($root)->values(),
             // §2a: label epistemik WAJIB melekat pada data, bukan hanya
             // dokumentasi/UI opsional — persis temuan أَرْحام proyek ini sendiri.
-            'epistemic_disclaimer' => 'Kata-kata ini berbagi root secara morfologis '
-                . '(pengelompokan Quranic Arabic Corpus). Berbagi root TIDAK berarti '
-                . 'berbagi makna — root dapat mencakup beberapa keluarga semantik '
-                . 'berbeda (Manifest §5; temuan proyek: أَرْحام memiliki profil '
-                . 'kolokasi berbeda dari root ر ح م yang sama).',
+            'epistemic_disclaimer' => self::EPISTEMIC_DISCLAIMER,
             // §2b: status eksplisit, bukan diam-diam hilang — UI/pengguna tahu
             // ini keputusan sadar, bukan fitur yang belum sempat dibangun.
             'statistics'  => null,
-            'statistics_status' => 'DITANGGUHKAN — menunggu spec presentasi dari '
-                . 'Analyst (root ≠ lemma, risiko salah-atribusi; PUTUSAN-05 §2b).',
+            'statistics_status' => self::STATISTICS_STATUS,
         ]);
     }
 }

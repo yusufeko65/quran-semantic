@@ -200,4 +200,37 @@ class PageController extends Controller
         $t = str_replace("\u{0671}", "\u{0627}", $t);
         return preg_replace('/[\x{0622}\x{0623}\x{0625}]/u', "\u{0627}", $t);
     }
+
+    /** GET /qse/root/{id} — halaman kemunculan root (PUTUSAN-05 §2a). */
+    public function root(int $id)
+    {
+        $root = Root::query()
+            ->select('id', 'arabic', 'transliteration', 'base_meaning')
+            ->findOrFail($id);
+
+        $occurrences = Word::query()
+            ->select('words.id', 'words.text_uthmani', 'words.ayah_id', 'words.position_in_ayah')
+            ->where('words.root_id', $root->id)
+            ->with(['ayah:id,surah_id,number_in_surah', 'ayah.surah:id,transliteration'])
+            ->orderBy('words.ayah_id')->orderBy('words.position_in_ayah')
+            ->paginate(30)
+            ->withQueryString()
+            ->through(fn (Word $w) => (object) [
+                'word_id'     => $w->id,
+                'text_uthmani' => $w->text_uthmani,
+                'ref'         => "{$w->ayah->surah_id}:{$w->ayah->number_in_surah}:{$w->position_in_ayah}",
+                'surah_id'    => $w->ayah->surah_id,
+                'ayah_number' => $w->ayah->number_in_surah,
+                'surah_name'  => $w->ayah->surah->transliteration,
+            ]);
+
+        return view('qse.root', [
+            'root'                => $root,
+            'occurrences'         => $occurrences,
+            // Satu sumber kebenaran (RootController) — identik dgn payload JSON,
+            // tidak ditulis ulang di sini (permintaan UI, HANDOFF-12).
+            'epistemicDisclaimer' => RootController::EPISTEMIC_DISCLAIMER,
+            'statisticsStatus'    => RootController::STATISTICS_STATUS,
+        ]);
+    }
 }
