@@ -167,12 +167,15 @@ class QseBuildStats extends Command
         // Analyst build 7, cross-check independen via query formula_occurrences
         // mentah — cocok persis dgn pipeline: n_a=40,n_b=53,n_ab=21).
         $r2 = (clone $get)('غَفُور', 'رَحِيم')->where('variant', 'formula_reduced')->first();
-        $pass62 = $r2 && $r2->n_ab == 21 && (int) $r2->n_a === 40 && (int) $r2->n_b === 53
+        // KOREKSI (bug identik dgn A8.1b-2 sebelumnya, kali ini di kode saya sendiri):
+        // byte-wise رَحِيم(U+0631) < غَفُور(U+063A) -> item_a=رَحِيم(n_a=53), item_b=غَفُور(n_b=40).
+        // Sebelumnya saya cek n_a===40 (mengira itu Ghafur) — TERTUKAR.
+        $pass62 = $r2 && $r2->n_ab == 21 && (int) $r2->n_a === 53 && (int) $r2->n_b === 40
             && abs($r2->expected - 0.346179) < 0.0005
             && abs($r2->pmi - 5.922727) < 0.0005
             && abs($r2->g2 - 153.97118) < 0.001
             && (int) $r2->n_ab_first_instance === 6;
-        $results['A6.2 TC#6 formula_reduced (D6-E FINAL: n_a=40,n_b=53,n_ab=21,E=0.346179,PMI=5.922727,G²=153.97118,n_ab_fi=6)'] = [$pass62, $r2];
+        $results['A6.2 TC#6 formula_reduced (D6-E FINAL: n_a=53(رحيم),n_b=40(غفور),n_ab=21,E=0.346179,PMI=5.922727,G²=153.97118,n_ab_fi=6)'] = [$pass62, $r2];
 
         // A7.1 — TC#7 raw. Target DIKUNCI ULANG A14 (N=6216).
         $r3 = (clone $get)('عَزِيز', 'رَحِيم')->where('variant', 'raw')->first();
@@ -184,13 +187,15 @@ class QseBuildStats extends Command
 
         // A7.2 — TC#7 formula_reduced. DIKUNCI NUMERIK PENUH (D6-E FINAL).
         $r4 = (clone $get)('عَزِيز', 'رَحِيم')->where('variant', 'formula_reduced')->first();
-        $pass72 = $r4 && $r4->n_ab == 2 && (int) $r4->n_a === 50 && (int) $r4->n_b === 53
+        // KOREKSI (bug identik A6.2 di atas): byte-wise رَحِيم(U+0631) < عَزِيز(U+0639)
+        // -> item_a=رَحِيم(n_a=53), item_b=عَزِيز(n_b=50). Sebelumnya tertukar.
+        $pass72 = $r4 && $r4->n_ab == 2 && (int) $r4->n_a === 53 && (int) $r4->n_b === 50
             && abs($r4->expected - 0.432724) < 0.0005
             && $r4->pmi !== null && abs($r4->pmi - 2.208482) < 0.0005
             && abs($r4->g2 - 3.08635) < 0.001
             && (int) $r4->n_ab_first_instance === 1
             && $r4->n_ab < 14; // arah tetap dipertahankan sbg sanity check tambahan
-        $results['A7.2 TC#7 formula_reduced (D6-E FINAL: n_a=50,n_b=53,n_ab=2,E=0.432724,PMI=2.208482,G²=3.08635,n_ab_fi=1)'] = [$pass72, $r4];
+        $results['A7.2 TC#7 formula_reduced (D6-E FINAL: n_a=53(رحيم),n_b=50(عزيز),n_ab=2,E=0.432724,PMI=2.208482,G²=3.08635,n_ab_fi=1)'] = [$pass72, $r4];
 
         // A8.1b (SPEC-02 b.142-148, HANDOFF-09) — DUA klausa ARAH-AGNOSTIK persis
         // seperti teks spec, bukan satu asersi gabungan yang diam-diam mengandaikan
