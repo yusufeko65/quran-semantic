@@ -10,6 +10,7 @@ use App\Models\Root;
 use App\Models\SemanticFieldMember;
 use App\Models\Word;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * RETRIEVAL BERLAPIS (Manifest §11) — jantung kelengkapan "test suite".
@@ -108,12 +109,17 @@ class VerseRetrievalService
      */
     public function statistics(string $itemType, string $itemRef, int $limit = 10): array
     {
-        $build = Collocation::query()->max('corpus_build_id'); // build terbaru
+        // PUTUSAN-06 §5.4: baca is_current=1, JANGAN fallback ke MAX(id) —
+        // itu menghidupkan kembali bug promosi-implisit yang PUTUSAN-06
+        // sengaja hapus. Kalau tak ada build current, kembalikan empty state
+        // JUJUR (§18/§3), bukan menebak build "terbaru" sebagai pengganti.
+        $build = DB::table('corpus_builds')->where('is_current', 1)->value('id');
         if (!$build) {
             return [
                 'available' => false,
-                'note' => 'Statistik Tier 0 belum dibangun (jalankan qse:build-stats). '
-                    . 'Slot jujur kosong (Manifest §3).',
+                'note' => 'Belum ada build statistik yang DITERBITKAN (is_current). '
+                    . 'Kandidat build mungkin ada, tapi belum dipromosikan sadar '
+                    . '(lihat qse:promote-build, PUTUSAN-06). Slot jujur kosong (§3).',
             ];
         }
 

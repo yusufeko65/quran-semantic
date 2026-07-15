@@ -229,16 +229,32 @@ class QseBuildStats extends Command
         $results['A9.1-A9.3 pre-registered (n_ab=0, pmi NULL, fdr=0) x2'] = [$passPre, [$r5, $r6]];
 
         $allPass = true;
+        $passCount = 0;
         foreach ($results as $label => [$pass, $data]) {
             $mark = $pass ? '✅ PASS' : '❌ FAIL';
             $this->line("  {$mark}  {$label}");
-            if (!$pass) {
+            if ($pass) {
+                $passCount++;
+            } else {
                 $allPass = false;
                 $this->line('         data: ' . json_encode($data));
             }
         }
         $this->newLine();
         $this->line($allPass ? '=== SEMUA 7 ASERSI LOLOS ===' : '=== ADA ASERSI GAGAL — lihat detail di atas ===');
+
+        // PUTUSAN-06 §5.3: catat jejak verify di notes — TANPA ini, qse:promote-build
+        // tidak punya cara menegakkan syarat "belum pernah lolos 7/7 -> tolak".
+        // Ditulis apa adanya (lolos maupun gagal), bukan hanya saat sukses —
+        // histori percobaan verify yang gagal pun bagian dari silsilah (§9/§11).
+        $total = count($results);
+        $notes = json_decode(DB::table('corpus_builds')->where('id', $buildId)->value('notes') ?? '{}', true) ?? [];
+        $notes['verify'] = [
+            'passed'     => $allPass,
+            'assertions' => "{$passCount}/{$total}",
+            'at'         => now()->toDateTimeString(),
+        ];
+        DB::table('corpus_builds')->where('id', $buildId)->update(['notes' => json_encode($notes)]);
 
         return $allPass;
     }
