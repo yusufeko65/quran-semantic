@@ -77,22 +77,22 @@
         (preview ? ` · <span class="wd-mono">${preview}</span>` : '') + `</p>`;
     }
 
-    // Butir 9 (D3-C): untuk item_type='lemma', payload WAJIB menyertakan jumlah
-    // profil morfosintaktis yang diagregasi jadi satu angka — ditaruh menonjol
-    // DI ATAS statistik, karena ini memengaruhi cara membaca seluruh angka di
-    // bawahnya (contoh D3-C sendiri: 'عزيز n=101 mengagregasi 12 profil berbeda).
-    const itemProfile = l3.item_profile || l3.statistics?.item_profile;
-    if (itemProfile && itemProfile.profile_count != null) {
+    const stats = l3.statistics || {};
+    const collocations = stats.collocations || {};
+
+    // Butir 9 (D3-C): untuk item_type='lemma', `statistics.profile_count`
+    // menghitung kombinasi distinct morph_features per kata — biaya agregasi
+    // yang memengaruhi cara membaca SELURUH angka di bawah, jadi ditaruh
+    // menonjol di atas, bukan footnote. null (bukan 0) berarti tidak relevan
+    // (item_type='root') — dibedakan sengaja oleh BE, jangan dirender sbg 0.
+    if (stats.profile_count != null) {
       html += `<div class="colloc-profile-note">` +
-        `<strong>${esc(itemProfile.total_ayat ?? sameRoot.total ?? '')} ayat</strong>, ` +
-        `<strong>${esc(itemProfile.profile_count)} profil gramatikal berbeda</strong> diagregasi ` +
+        `<strong>${esc(sameRoot.total ?? '')} ayat</strong>, ` +
+        `<strong>${esc(stats.profile_count)} profil gramatikal berbeda</strong> diagregasi ` +
         `jadi satu angka pada statistik di bawah (item_type=lemma, §4 butir 9). ` +
         `Ini biaya definisi operasional, bukan kekurangan data.` +
         `</div>`;
     }
-
-    const stats = l3.statistics || {};
-    const collocations = stats.collocations || {};
     const raw = collocations.raw || [];
     const reduced = collocations.formula_reduced || [];
 
