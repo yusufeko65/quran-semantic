@@ -77,58 +77,114 @@
         (preview ? ` · <span class="wd-mono">${preview}</span>` : '') + `</p>`;
     }
 
+    // Butir 9 (D3-C): untuk item_type='lemma', payload WAJIB menyertakan jumlah
+    // profil morfosintaktis yang diagregasi jadi satu angka — ditaruh menonjol
+    // DI ATAS statistik, karena ini memengaruhi cara membaca seluruh angka di
+    // bawahnya (contoh D3-C sendiri: 'عزيز n=101 mengagregasi 12 profil berbeda).
+    const itemProfile = l3.item_profile || l3.statistics?.item_profile;
+    if (itemProfile && itemProfile.profile_count != null) {
+      html += `<div class="colloc-profile-note">` +
+        `<strong>${esc(itemProfile.total_ayat ?? sameRoot.total ?? '')} ayat</strong>, ` +
+        `<strong>${esc(itemProfile.profile_count)} profil gramatikal berbeda</strong> diagregasi ` +
+        `jadi satu angka pada statistik di bawah (item_type=lemma, §4 butir 9). ` +
+        `Ini biaya definisi operasional, bukan kekurangan data.` +
+        `</div>`;
+    }
+
     const stats = l3.statistics || {};
     const collocations = stats.collocations || {};
     const raw = collocations.raw || [];
     const reduced = collocations.formula_reduced || [];
 
+    // Butir 6: G² tidak pernah tampil tanpa direction; pengurutan memisahkan
+    // arah dulu (bukan G² mentah lintas-arah). Kelompokkan per direction,
+    // urutkan G² menurun DI DALAM tiap kelompok saja.
+    const groupByDirection = (list) => {
+      const groups = { association: [], neutral: [], avoidance: [] };
+      list.forEach((c) => { (groups[c.direction] || groups.neutral).push(c); });
+      Object.values(groups).forEach((g) => g.sort((a, b) => (b.g2 || 0) - (a.g2 || 0)));
+      return groups;
+    };
+
+    // Deteksi ketegangan antar-varian (inti tantangan desain HANDOFF-14 §3):
+    // pasangan yang FDR-signifikan di satu varian tapi tidak di varian lain
+    // (mis. ʿAzīz–Raḥīm: signifikan di raw, runtuh di formula_reduced).
+    const bySig = {};
+    raw.forEach((c) => { bySig[c.partner] = { raw: c.fdr_significant }; });
+    reduced.forEach((c) => { bySig[c.partner] = { ...(bySig[c.partner] || {}), reduced: c.fdr_significant }; });
+    const conflicted = new Set(Object.keys(bySig).filter((p) =>
+      bySig[p].raw !== undefined && bySig[p].reduced !== undefined && bySig[p].raw !== bySig[p].reduced));
+
+    const fdrBadge = (c) => c.fdr_significant
+      ? '<span class="colloc-fdr">signifikan (FDR)</span>'
+      : '<span class="colloc-fdr insig">tidak signifikan (FDR)</span>';
+
     const collocRow = (c) => {
       const warn = c.concentration_warning
-        ? `<span class="colloc-warn" title="Pola terkonsentrasi di sedikit surah — jangan digeneralisasi">⚠ terkonsentrasi${c.top_surah_share != null ? ' ' + Math.round(c.top_surah_share * 100) + '%' : ''}</span>`
+        ? `<span class="colloc-warn" title="Pola terkonsentrasi di sedikit surah — jangan digeneralisasi">⚠ terkonsentrasi ${c.top_surah_share != null ? Math.round(c.top_surah_share * 100) + '%' : ''}</span>`
+        : '';
+      const tension = conflicted.has(c.partner)
+        ? `<span class="colloc-warn colloc-tension" title="Signifikansi berbeda antara raw dan formula_reduced — lihat varian sebelah">⚠ tak konsisten antar-varian</span>`
         : '';
 
-      // G² TIDAK PERNAH tampil tanpa `direction` di sebelahnya (HANDOFF-03 dari PM,
-      // rujukan REVIEW-ANALYST-01 T3: G² buta arah — pasangan yang tidak pernah
-      // muncul bersama pun bisa menghasilkan G² positif). `direction` belum ada
-      // di kontrak payload saat ini, jadi G² ditahan, bukan ditampilkan berspekulasi.
-      const hasDirection = c.direction === 'association' || c.direction === 'avoidance' || c.direction === 'neutral';
-      const g2Part = hasDirection
-        ? ` · G²=${esc(c.g2)} (${esc(c.direction)})`
-        : ` · G² ditahan (menunggu field \u201cdirection\u201d)`;
-
-      // fdr_significant SENGAJA TIDAK dirender sama sekali — T1 (bug threshold FDR)
-      // belum diperbaiki, berlaku surut (K2). Jika field ini ada di payload, blok
-      // signifikansinya yang disembunyikan, bukan seluruh baris kolokasi.
-
-      const isAvoidance = c.direction === 'avoidance';
-      const label = isAvoidance
-        ? `<span class="colloc-avoidance-tag">pola saling menghindar</span>`
+      // Butir 8: dekomposisi first_instance HANYA relevan untuk formula_reduced.
+      const decomposition = (c.n_ab_first_instance != null)
+        ? ` · sisa-formula=${esc(c.n_ab_first_instance)} · non-formulaik-murni=${esc(c.n_ab_non_formulaik)}`
         : '';
 
       return `<div class="colloc-row">` +
-        `<div class="colloc-top"><span class="cp">${esc(c.partner)}</span>${label}${warn}</div>` +
-        `<span class="wd-mono">n=${esc(c.n_ab)} · expected=${esc(c.expected)} · ${c.ratio != null ? esc(c.ratio) + '×' : '–'}` +
-        ` · PMI=${esc(c.pmi)}${g2Part}${c.p_permutation != null ? ' · p=' + esc(c.p_permutation) : ''}</span>` +
+        `<div class="colloc-top"><span class="cp">${esc(c.partner)}</span>${tension}${warn}</div>` +
+        `<span class="wd-mono">n=${esc(c.n_ab)}${decomposition} · expected=${esc(c.expected)} · ${c.ratio != null ? esc(c.ratio) + '×' : '–'}` +
+        ` · PMI=${esc(c.pmi)} · G²=${esc(c.g2)} (${esc(c.direction)})${c.p_permutation != null ? ' · p=' + esc(c.p_permutation) : ''}</span>` +
+        ` ${fdrBadge(c)}` +
         `</div>`;
     };
 
     const variantBlock = (title, list) => {
       if (!list.length) return '';
-      return `<div class="colloc-variant"><p class="colloc-variant-title">${esc(title)}</p>` +
-        list.slice(0, 5).map(collocRow).join('') + `</div>`;
+      const g = groupByDirection(list);
+      let inner = '';
+      if (g.association.length) inner += g.association.slice(0, 5).map(collocRow).join('');
+      if (g.neutral.length) inner += g.neutral.slice(0, 3).map(collocRow).join('');
+      if (g.avoidance.length) {
+        // Butir 6: avoidance BUKAN "kolokasi" — subjudul & label berbeda, tidak dicampur ke daftar asosiasi.
+        inner += `<p class="colloc-avoidance-heading">Pola saling menghindar (bukan kolokasi)</p>` +
+          g.avoidance.slice(0, 3).map(collocRow).join('');
+      }
+      return `<div class="colloc-variant"><p class="colloc-variant-title">${esc(title)}</p>${inner}</div>`;
     };
 
-    if (raw.length || reduced.length) {
-      html += `<div class="colloc">` +
+    if (stats.available === false) {
+      // §6 HANDOFF-14: render pesan BE apa adanya, jangan diganti generik.
+      html += `<div class="wd-empty">` +
+        `<p class="wd-empty-label">Statistik kolokasi (Tier 0) — belum tersedia</p>` +
+        `<p class="wd-empty-body">${esc(stats.note || 'Belum ada build aktif (is_current) untuk data ini.')}</p></div>`;
+    } else if (raw.length || reduced.length) {
+      const tensionBanner = conflicted.size
+        ? `<p class="colloc-tension-banner">⚠ ${conflicted.size} pasangan menunjukkan hasil berbeda antara ` +
+          `<strong>mentah</strong> dan <strong>formula dikurangi</strong> — signifikan di satu varian, ` +
+          `tidak di varian lain. Jangan baca salah satu varian saja.</p>`
+        : '';
+      html += tensionBanner + `<div class="colloc">` +
         variantBlock('Mentah (raw)', raw) +
         variantBlock('Formula dikurangi (basmalah dkk. dibuang)', reduced) +
         `</div>`;
       html += disclaimer(stats.status_epistemik ||
-        'PMI adalah pola statistik penggunaan, bukan makna. G² ditahan sampai setiap ' +
-        'pasangan menyertakan arah (asosiasi/menghindar/netral) — tanpa itu, G² bisa ' +
-        'menyesatkan untuk pasangan yang justru tidak pernah muncul bersama.');
-      html += `<p class="method-note colloc-hold-note">Signifikansi statistik (FDR) belum ` +
-        `ditampilkan — menunggu perbaikan ambang batas di pipeline (T1).</p>`;
+        'Angka kolokasi adalah data pola penggunaan — bukan makna (§14). PMI/rasio = ' +
+        'effect size; G² = kekuatan bukti — tapi G² buta arah, selalu dibaca bersama direction.');
+
+      const disp = stats.dispersion || l3.dispersion;
+      if (disp) {
+        // Butir 7: dispersi (n_ayat, D/DP) tidak pernah tampil tanpa n_ayat di sisinya;
+        // hanya satu varian (raw) tersedia — perbandingan lintas-varian memang belum bisa dilakukan.
+        html += `<div class="colloc-dispersion">` +
+          `<p class="colloc-variant-title">Dispersi (raw)</p>` +
+          `<span class="wd-mono">n_ayat=${esc(disp.n_ayat)} · D=${esc(disp.juilland_d)} · DP=${esc(disp.dp)}` +
+          (disp.top_surah_share != null ? ` · top_surah_share=${esc(disp.top_surah_share)}` : '') + `</span>`;
+        if (disp.sparsity_disclaimer) html += disclaimer(disp.sparsity_disclaimer);
+        if (disp.note) html += disclaimer(disp.note);
+        html += `</div>`;
+      }
     } else {
       html += `<div class="wd-empty">` +
         `<p class="wd-empty-label">Statistik kolokasi (Tier 0) — belum tersedia</p>` +

@@ -15,9 +15,9 @@
         <a href="{{ route('qse.page.roots') }}" style="color:inherit;">&larr; Jelajahi Root</a>
     </div>
 
-    <h1 class="page-title">
-        <span style="font-family:var(--font-arabic);">{{ $root->arabic }}</span>
-        <span class="wd-mono" style="font-size:1rem;font-weight:400;color:var(--ink-faint);">{{ $root->transliteration }}</span>
+    <h1 class="page-title root-title">
+        <span class="root-title-ar">{{ $root->arabic }}</span>
+        <span class="root-title-translit wd-mono">{{ $root->transliteration }}</span>
     </h1>
     @if (!empty($root->base_meaning))
         <p class="lead">{{ $root->base_meaning }}</p>
