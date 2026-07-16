@@ -170,10 +170,38 @@ class VerseRetrievalService
             ->where('item_ref', $itemRef)
             ->first();
 
+        // §4 butir 9 (D3-C) — HANYA utk lemma: item_type='lemma' meruntuhkan
+        // profil morfosintaktis (kasus, definiteness, jumlah, ADJ) jadi satu
+        // item. Payload WAJIB menyertakan berapa profil berbeda yang
+        // diagregasi — biaya definisi operasional yang harus TERLIHAT, bukan
+        // disembunyikan di balik satu angka bulat n_a/n_b.
+        //
+        // Definisi "profil" (diverifikasi thd data nyata sebelum kode ini
+        // ditulis): kombinasi TAG morph_features yang di-sort lalu dihitung
+        // distinct-nya per kata. Contoh عَزِيز (n=101): 12 profil — cocok
+        // PERSIS klaim SPEC-01 D3-C (38 ADJ/63 non-ADJ, 2 MP/99 MS).
+        $profileCount = null;
+        if ($itemType === 'lemma') {
+            $profileCount = Word::query()
+                ->where('lemma', $itemRef)
+                ->pluck('morph_features')
+                ->map(function ($mf) {
+                    $tags = json_decode($mf ?? '[]', true) ?: [];
+                    sort($tags);
+                    return implode(',', $tags);
+                })
+                ->unique()
+                ->count();
+        }
+
         return [
             'available'       => !empty($variants),
             'corpus_build_id' => $build,             // §4 butir 5: auditabilitas
             'collocations'    => $variants,          // §4 butir 3: dua varian berdampingan
+            // §4 butir 9 (D3-C) — NULL utk item_type='root' (agregasi profil
+            // tidak relevan di situ; root sudah retrieval faktual per-kata,
+            // bukan digabung lintas bentuk morfologis spt lemma).
+            'profile_count'   => $profileCount,
             'dispersion'      => $disp ? [
                 'n_ayat'          => $disp->n_ayat, // A4/§4 butir 7: D/DP tak terinterpretasi tanpa ini
                 'juilland_d'      => $disp->juilland_d !== null ? round($disp->juilland_d, 3) : null,
