@@ -77,24 +77,27 @@
         (preview ? ` · <span class="wd-mono">${preview}</span>` : '') + `</p>`;
     }
 
-    const stats = l3.statistics || {};
-    const collocations = stats.collocations || {};
-
-    // Butir 9 (D3-C): untuk item_type='lemma', `statistics.profile_count`
-    // menghitung kombinasi distinct morph_features per kata — biaya agregasi
-    // yang memengaruhi cara membaca SELURUH angka di bawah, jadi ditaruh
-    // menonjol di atas, bukan footnote. null (bukan 0) berarti tidak relevan
-    // (item_type='root') — dibedakan sengaja oleh BE, jangan dirender sbg 0.
-    if (stats.profile_count != null) {
-      html += `<div class="colloc-profile-note">` +
-        `<strong>${esc(sameRoot.total ?? '')} ayat</strong>, ` +
-        `<strong>${esc(stats.profile_count)} profil gramatikal berbeda</strong> diagregasi ` +
-        `jadi satu angka pada statistik di bawah (item_type=lemma, §4 butir 9). ` +
-        `Ini biaya definisi operasional, bukan kekurangan data.` +
-        `</div>`;
-    }
     const raw = collocations.raw || [];
     const reduced = collocations.formula_reduced || [];
+
+    // Butir 9 (D3-C, revisi HANDOFF-15 §A): profile_count kini OBJEK
+    // {raw, formula_reduced} — dua populasi berbeda, TIDAK BOLEH dicampur.
+    // Setiap catatan profil ditempel pada variantnya sendiri, dengan angka
+    // ayat milik variant itu sendiri pula (raw: same_root.total; reduced:
+    // belum ada field ayat-per-variant yang terkonfirmasi di payload ini —
+    // ditampilkan tanpa angka ayat daripada menebak/mencampur populasi).
+    const profileCount = stats.profile_count; // null (root) | {raw, formula_reduced} (lemma)
+    const profileNote = (variantKey) => {
+      if (!profileCount || profileCount[variantKey] == null) return '';
+      const n = profileCount[variantKey];
+      const ayatPart = variantKey === 'raw' && sameRoot.total != null
+        ? `<strong>${esc(sameRoot.total)} ayat</strong>, `
+        : '';
+      return `<div class="colloc-profile-note">` +
+        `${ayatPart}<strong>${esc(n)} profil gramatikal berbeda</strong> diagregasi jadi satu angka ` +
+        `pada varian ini (item_type=lemma, §4 butir 9). Biaya definisi operasional, bukan kekurangan data.` +
+        `</div>`;
+    };
 
     // Butir 6: G² tidak pernah tampil tanpa direction; pengurutan memisahkan
     // arah dulu (bukan G² mentah lintas-arah). Kelompokkan per direction,
@@ -140,10 +143,10 @@
         `</div>`;
     };
 
-    const variantBlock = (title, list) => {
+    const variantBlock = (title, list, variantKey) => {
       if (!list.length) return '';
       const g = groupByDirection(list);
-      let inner = '';
+      let inner = profileNote(variantKey);
       if (g.association.length) inner += g.association.slice(0, 5).map(collocRow).join('');
       if (g.neutral.length) inner += g.neutral.slice(0, 3).map(collocRow).join('');
       if (g.avoidance.length) {
@@ -166,15 +169,15 @@
           `tidak di varian lain. Jangan baca salah satu varian saja.</p>`
         : '';
       html += tensionBanner + `<div class="colloc">` +
-        variantBlock('Mentah (raw)', raw) +
-        variantBlock('Formula dikurangi (basmalah dkk. dibuang)', reduced) +
+        variantBlock('Mentah (raw)', raw, 'raw') +
+        variantBlock('Formula dikurangi (basmalah dkk. dibuang)', reduced, 'formula_reduced') +
         `</div>`;
       html += disclaimer(stats.status_epistemik ||
         'Angka kolokasi adalah data pola penggunaan — bukan makna (§14). PMI/rasio = ' +
         'effect size; G² = kekuatan bukti — tapi G² buta arah, selalu dibaca bersama direction.');
 
       const disp = stats.dispersion || l3.dispersion;
-      if (disp) {
+      if (disp && disp.n_ayat != null) {
         // Butir 7: dispersi (n_ayat, D/DP) tidak pernah tampil tanpa n_ayat di sisinya;
         // hanya satu varian (raw) tersedia — perbandingan lintas-varian memang belum bisa dilakukan.
         html += `<div class="colloc-dispersion">` +
@@ -184,6 +187,13 @@
         if (disp.sparsity_disclaimer) html += disclaimer(disp.sparsity_disclaimer);
         if (disp.note) html += disclaimer(disp.note);
         html += `</div>`;
+      } else if (disp) {
+        // disp ada tapi n_ayat belum terisi (A4 belum terkonfirmasi BE, SPEC-01 §6) —
+        // JANGAN tampilkan D/DP tanpa n_ayat (butir 7). Empty-state jujur, bukan diam-diam disembunyikan.
+        html += `<div class="wd-empty">` +
+          `<p class="wd-empty-label">Dispersi — belum bisa ditampilkan</p>` +
+          `<p class="wd-empty-body">D/DP tersedia tapi \u201cn_ayat\u201d belum terisi (A4 belum ` +
+          `dikonfirmasi) — keduanya wajib tampil berdampingan, jadi ditahan sampai lengkap.</p></div>`;
       }
     } else {
       html += `<div class="wd-empty">` +
