@@ -77,6 +77,8 @@
         (preview ? ` · <span class="wd-mono">${preview}</span>` : '') + `</p>`;
     }
 
+    const stats = l3.statistics || {};
+    const collocations = stats.collocations || {};
     const raw = collocations.raw || [];
     const reduced = collocations.formula_reduced || [];
 
