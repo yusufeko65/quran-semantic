@@ -109,7 +109,14 @@ class WordAnalysisService
                     ? 'Belum ada cross-reference naratif terkonfirmasi — tumbuh via kurasi (§11).'
                     : null,
             ],
-            'statistics' => $this->retrieval->statistics('root', $word->root->arabic),
+            // 'statistics' => $this->retrieval->statistics('root', $word->root->arabic),
+            'statistics' => $word->lemma
+                ? $this->retrieval->statistics('lemma', $word->lemma)
+                : [
+                    'available' => false,
+                    'note' => 'Kata ini tidak memiliki lemma (partikel/fungsi gramatikal) '
+                        . '— statistik kolokasi level lemma tidak berlaku di sini.',
+                ],
             'disclaimer' => 'Lapisan ini menampilkan DATA. Tidak boleh langsung membuat '
                 . 'kesimpulan makna (Manifest Bagian V, Lapisan 3).',
         ];
