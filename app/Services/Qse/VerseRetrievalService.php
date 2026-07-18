@@ -170,37 +170,34 @@ class VerseRetrievalService
             ->where('item_ref', $itemRef)
             ->first();
 
-        // §4 butir 9 (D3-C) — HANYA utk lemma: item_type='lemma' meruntuhkan
-        // profil morfosintaktis (kasus, definiteness, jumlah, ADJ) jadi satu
-        // item. Payload WAJIB menyertakan berapa profil berbeda yang
-        // diagregasi — biaya definisi operasional yang harus TERLIHAT, bukan
-        // disembunyikan di balik satu angka bulat n_a/n_b.
+        // §4 butir 9 (D3-C, DIREVISI HANDOFF-15 §A) — profile_count adalah
+        // properti (lemma × variant), BUKAN invariant. HANYA utk lemma.
+        // Memakai ULANG logika eksklusi D6-E (full_ayah + verse_final_ngram
+        // via formula_occurrences) — bukan ditulis ulang, supaya definisi
+        // "selamat dari reduksi" konsisten dgn n_total/n_scope di tempat lain.
         //
-        // Definisi "profil" (diverifikasi thd data nyata sebelum kode ini
-        // ditulis): kombinasi TAG morph_features yang di-sort lalu dihitung
-        // distinct-nya per kata. Contoh عَزِيز (n=101): 12 profil — cocok
-        // PERSIS klaim SPEC-01 D3-C (38 ADJ/63 non-ADJ, 2 MP/99 MS).
+        // Diverifikasi thd data SEBELUM kode ini: profile_count(raw)=12,
+        // profile_count(formula_reduced)=12 utk عَزِيز — SAMA, membantah
+        // dugaan terstruktur Analyst (HANDOFF-15) bahwa reduksi formulaik
+        // membuang SATU profil ["ADJ","INDEF","MS","NOM"] seluruhnya (turun
+        // 11->8 kemunculan, tapi tidak nol — profil itu tetap ada).
         $profileCount = null;
         if ($itemType === 'lemma') {
-            $profileCount = Word::query()
-                ->where('lemma', $itemRef)
-                ->pluck('morph_features')
-                ->map(function ($mf) {
-                    $tags = json_decode($mf ?? '[]', true) ?: [];
-                    sort($tags);
-                    return implode(',', $tags);
-                })
-                ->unique()
-                ->count();
+            $profileCount = [
+                'raw'             => $this->profileCount($itemRef, 'raw', $build),
+                'formula_reduced' => $this->profileCount($itemRef, 'formula_reduced', $build),
+            ];
         }
 
         return [
             'available'       => !empty($variants),
             'corpus_build_id' => $build,             // §4 butir 5: auditabilitas
             'collocations'    => $variants,          // §4 butir 3: dua varian berdampingan
-            // §4 butir 9 (D3-C) — NULL utk item_type='root' (agregasi profil
-            // tidak relevan di situ; root sudah retrieval faktual per-kata,
-            // bukan digabung lintas bentuk morfologis spt lemma).
+            // §4 butir 9 (D3-C direvisi) — objek {raw, formula_reduced},
+            // BUKAN lagi angka tunggal (breaking change dari implementasi
+            // sebelumnya — lihat catatan handoff ke UI). NULL utk root.
+            // UI WAJIB memilih angka sesuai variant yang sedang ditampilkan
+            // — JANGAN menampilkan raw saat formula_reduced aktif (D3-C).
             'profile_count'   => $profileCount,
             'dispersion'      => $disp ? [
                 'n_ayat'          => $disp->n_ayat, // A4/§4 butir 7: D/DP tak terinterpretasi tanpa ini
@@ -239,5 +236,63 @@ class VerseRetrievalService
             'text_uthmani'    => $w->ayah->text_uthmani,
             'classification'  => $w->ayah->currentClassification?->classification, // muhkamat/mutasyabihat §6
         ];
+    }
+
+    /**
+     * profile_count(lemma, variant) — D3-C direvisi HANDOFF-15 §A.
+     * raw             : semua kata ber-lemma ini, dikelompokkan (text_normalized,morph_features).
+     * formula_reduced : HANYA kata yang SELAMAT dari reduksi — logika eksklusi
+     *                   PERSIS D6-E (exclude full_ayah non-first-instance,
+     *                   exclude posisi dalam rentang verse_final_ngram
+     *                   non-first-instance). Dipakai ulang, bukan ditulis ulang.
+     */
+    private function profileCount(string $lemma, string $variant, int $buildId): int
+    {
+        $query = Word::query()->where('lemma', $lemma)
+            ->select('id', 'ayah_id', 'position_in_ayah', 'text_normalized', 'morph_features');
+
+        if ($variant === 'formula_reduced') {
+            $excludedFullAyah = DB::table('formula_occurrences as fo')
+                ->join('formulas as f', 'f.id', '=', 'fo.formula_id')
+                ->where('f.corpus_build_id', $buildId)
+                ->where('f.kind', 'full_ayah')
+                ->where('fo.is_first_instance', 0)
+                ->pluck('fo.ayah_id');
+
+            $query->whereNotIn('ayah_id', $excludedFullAyah);
+        }
+
+        $words = $query->get();
+
+        if ($variant === 'formula_reduced') {
+            // Rentang verse_final_ngram non-first-instance, dikelompokkan per ayah
+            $ngramRangesByAyah = DB::table('formula_occurrences as fo')
+                ->join('formulas as f', 'f.id', '=', 'fo.formula_id')
+                ->where('f.corpus_build_id', $buildId)
+                ->where('f.kind', 'verse_final_ngram')
+                ->where('fo.is_first_instance', 0)
+                ->select('fo.ayah_id', 'fo.start_pos', 'fo.end_pos')
+                ->get()
+                ->groupBy('ayah_id');
+
+            $words = $words->filter(function (Word $w) use ($ngramRangesByAyah) {
+                foreach ($ngramRangesByAyah->get($w->ayah_id, collect()) as $r) {
+                    if ($w->position_in_ayah >= $r->start_pos && $w->position_in_ayah <= $r->end_pos) {
+                        return false; // posisi ini direduksi -> tidak "selamat"
+                    }
+                }
+                return true;
+            });
+        }
+
+        return $words->map(fn (Word $w) => $this->profileKey($w))->unique()->count();
+    }
+
+    /** Kunci profil: (text_normalized, morph_features ter-sort) — sesuai query Analyst HANDOFF-15 §A. */
+    private function profileKey(Word $w): string
+    {
+        $tags = json_decode($w->morph_features ?? '[]', true) ?: [];
+        sort($tags);
+        return $w->text_normalized . '|' . implode(',', $tags);
     }
 }
