@@ -291,7 +291,10 @@ class VerseRetrievalService
     /** Kunci profil: (text_normalized, morph_features ter-sort) — sesuai query Analyst HANDOFF-15 §A. */
     private function profileKey(Word $w): string
     {
-        $tags = json_decode($w->morph_features ?? '[]', true) ?: [];
+        // Word::$casts sudah men-decode morph_features jadi array (lihat
+        // app/Models/Word.php) — JANGAN json_decode() lagi di sini (itu
+        // penyebab TypeError: array diberikan, string diharapkan).
+        $tags = $w->morph_features ?? [];
         sort($tags);
         return $w->text_normalized . '|' . implode(',', $tags);
     }
