@@ -22,7 +22,12 @@ class WordAnalysisService
     /** Batas tampilan awal per lapis retrieval (selebihnya via endpoint root). */
     private const PREVIEW_LIMIT = 20;
 
-    public function analyze(Word $word): array
+    /**
+     * @param  int  $statsLimit  PUTUSAN-08 §1.1 — diteruskan ke
+     *   VerseRetrievalService::statistics() sbg parameter $limit. Default 10
+     *   (perilaku lama tak berubah); UI mengirim nilai besar utk "muat semua".
+     */
+    public function analyze(Word $word, int $statsLimit = 10): array
     {
         $word->loadMissing(['ayah.surah', 'root']);
 
@@ -41,7 +46,7 @@ class WordAnalysisService
             ],
             'layer1_phoneme' => $this->layer1($word),
             'layer2_root'    => $this->layer2($word),
-            'layer3_verses'  => $this->layer3($word),
+            'layer3_verses'  => $this->layer3($word, $statsLimit),
             'layer4_analysis' => $this->layer4($word),
         ];
     }
@@ -80,7 +85,7 @@ class WordAnalysisService
         ];
     }
 
-    private function layer3(Word $word): array
+    private function layer3(Word $word, int $statsLimit = 10): array
     {
         if (!$word->root) {
             return ['note' => 'Tanpa root — retrieval by-root tidak tersedia untuk kata ini.'];
@@ -109,9 +114,8 @@ class WordAnalysisService
                     ? 'Belum ada cross-reference naratif terkonfirmasi — tumbuh via kurasi (§11).'
                     : null,
             ],
-            // 'statistics' => $this->retrieval->statistics('root', $word->root->arabic),
             'statistics' => $word->lemma
-                ? $this->retrieval->statistics('lemma', $word->lemma)
+                ? $this->retrieval->statistics('lemma', $word->lemma, $statsLimit)
                 : [
                     'available' => false,
                     'note' => 'Kata ini tidak memiliki lemma (partikel/fungsi gramatikal) '

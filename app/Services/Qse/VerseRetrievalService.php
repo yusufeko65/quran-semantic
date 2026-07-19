@@ -87,7 +87,6 @@ class VerseRetrievalService
             ->with(['ayahA.surah:id,transliteration', 'ayahB.surah:id,transliteration'])
             ->get()
             ->map(function (CrossReference $x) use ($ayahIds) {
-                // Tampilkan sisi "lawan" dari ayat yang sudah kita punya
                 $other = in_array($x->ayah_a_id, $ayahIds, true) ? $x->ayahB : $x->ayahA;
                 return [
                     'retrieval_layer' => 3,
@@ -109,10 +108,7 @@ class VerseRetrievalService
      */
     public function statistics(string $itemType, string $itemRef, int $limit = 10): array
     {
-        // PUTUSAN-06 §5.4: baca is_current=1, JANGAN fallback ke MAX(id) —
-        // itu menghidupkan kembali bug promosi-implisit yang PUTUSAN-06
-        // sengaja hapus. Kalau tak ada build current, kembalikan empty state
-        // JUJUR (§18/§3), bukan menebak build "terbaru" sebagai pengganti.
+        // PUTUSAN-06 §5.4: baca is_current=1, JANGAN fallback ke MAX(id).
         $build = DB::table('corpus_builds')->where('is_current', 1)->value('id');
         if (!$build) {
             return [
@@ -123,43 +119,105 @@ class VerseRetrievalService
             ];
         }
 
+        // PUTUSAN-08 (Butir 10) — ambil SEMUA baris (kedua varian) SEKALI,
+        // tanpa limit. Dipakai utk tiga hal sekaligus:
+        //   (a) M = total pasangan lolos lantai D5 per varian
+        //   (b) deteksi status_changed (fdr_significant/direction beda antar varian)
+        //   (c) sumber top-N (bukan query terpisah per variant lagi)
+        // Query tunggal terhadap satu item — bukan menyapu seluruh 343k baris
+        // tabel, jadi tetap murah (partner satu item jarang lebih dari ratusan).
+        $allRows = Collocation::query()
+            ->where('corpus_build_id', $build)
+            ->where('item_type', $itemType)
+            ->where(fn ($q) => $q->where('item_a', $itemRef)->orWhere('item_b', $itemRef))
+            ->get();
+
+        $rowsByVariant = $allRows->groupBy('variant');
+
+        $directionOf = fn (Collocation $c) => $c->n_ab > $c->expected ? 'association'
+            : ($c->n_ab < $c->expected ? 'avoidance' : 'neutral');
+
+        // Peta partner -> [variant => Collocation], utk bandingkan status
+        // lintas varian PER PASANGAN yang sama.
+        $byPartner = [];
+        foreach ($rowsByVariant as $variant => $rows) {
+            foreach ($rows as $c) {
+                $partner = $c->item_a === $itemRef ? $c->item_b : $c->item_a;
+                $byPartner[$partner][$variant] = $c;
+            }
+        }
+
+        // PUTUSAN-08 §1 butir 2 — pasangan yang fdr_significant ATAU direction
+        // beda antar raw vs formula_reduced WAJIB menonjol, apapun peringkat G².
+        // Ini yang menyelesaikan kasus ʿAzīz–Raḥīm (signifikan di raw, runtuh/
+        // avoidance di formula_reduced) — statusnya sendiri yang memicu keharusan
+        // tampil, bukan menunggu kebetulan masuk top-N.
+        $statusChangedPartners = [];
+        foreach ($byPartner as $partner => $byVar) {
+            if (isset($byVar['raw'], $byVar['formula_reduced'])) {
+                $r = $byVar['raw'];
+                $f = $byVar['formula_reduced'];
+                if ((bool) $r->fdr_significant !== (bool) $f->fdr_significant
+                    || $directionOf($r) !== $directionOf($f)) {
+                    $statusChangedPartners[$partner] = true;
+                }
+            }
+        }
+
         $variants = [];
         foreach (['raw', 'formula_reduced'] as $variant) {
-            $colls = Collocation::query()
-                ->where('corpus_build_id', $build)
-                ->where('variant', $variant)
-                ->where('item_type', $itemType)
-                ->where(fn ($q) => $q->where('item_a', $itemRef)->orWhere('item_b', $itemRef))
-                ->orderByDesc('g2')
-                ->limit($limit)
-                ->get()
-                ->map(fn (Collocation $c) => [
-                    'partner'         => $c->item_a === $itemRef ? $c->item_b : $c->item_a,
+            $rows = $rowsByVariant->get($variant, collect());
+            $total = $rows->count(); // M (Butir 10 §1.1 — lantai D5 = syarat baris tersimpan sama sekali)
+
+            $sorted = $rows->sortByDesc('g2')->values();
+            $topN = $sorted->take($limit);
+            $topNPartners = $topN->map(
+                fn (Collocation $c) => $c->item_a === $itemRef ? $c->item_b : $c->item_a
+            )->all();
+
+            // Paksa sertakan partner status_changed yang TIDAK masuk top-N biasa —
+            // inilah mekanisme "tak boleh diam-diam hilang" (Butir 10 §1.2).
+            $forced = $sorted->filter(function (Collocation $c) use ($itemRef, $statusChangedPartners, $topNPartners) {
+                $partner = $c->item_a === $itemRef ? $c->item_b : $c->item_a;
+                return isset($statusChangedPartners[$partner]) && !in_array($partner, $topNPartners, true);
+            });
+
+            $finalRows = $topN->concat($forced);
+
+            $colls = $finalRows->map(function (Collocation $c) use ($itemRef, $variant, $statusChangedPartners, $directionOf) {
+                $partner = $c->item_a === $itemRef ? $c->item_b : $c->item_a;
+                return [
+                    'partner'         => $partner,
                     'n_ab'            => $c->n_ab,
-                    // A6/§4 butir 8: dekomposisi WAJIB untuk formula_reduced — dari
-                    // n_ab ini, berapa yang bertahan HANYA karena instance pertama
-                    // formula dipertahankan (bukan pemakaian genuin di luar formula).
                     'n_ab_first_instance' => $variant === 'formula_reduced' ? $c->n_ab_first_instance : null,
                     'n_ab_non_formulaik'  => $variant === 'formula_reduced' ? ($c->n_ab - $c->n_ab_first_instance) : null,
                     'expected'        => round($c->expected, 2),
                     'ratio'           => $c->expected > 0 ? round($c->n_ab / $c->expected, 1) : null,
-                    'pmi'             => $c->pmi !== null ? round($c->pmi, 2) : null, // §4: PMI+G² berdampingan
+                    'pmi'             => $c->pmi !== null ? round($c->pmi, 2) : null,
                     'g2'              => round($c->g2, 1),
-                    // §4 butir 6 (T3): G² buta arah — positif baik untuk asosiasi
-                    // MAUPUN penghindaran. Arah WAJIB eksplisit dari n_ab vs expected.
-                    // Pasangan 'avoidance' TIDAK boleh disebut "kolokasi" walau G²-nya
-                    // besar (jebakan TC#9).
-                    'direction'       => $c->n_ab > $c->expected ? 'association'
-                        : ($c->n_ab < $c->expected ? 'avoidance' : 'neutral'),
-                    'p_permutation'   => $c->p_permutation, // NULL bila n_ab=0: "uji arah-asosiasi tak berlaku" (D6-B)
+                    'direction'       => $directionOf($c),
+                    'p_permutation'   => $c->p_permutation,
                     'fdr_significant' => (bool) $c->fdr_significant,
                     'top_surah_id'    => $c->top_surah_id,
                     'top_surah_share' => $c->top_surah_share !== null ? round($c->top_surah_share, 3) : null,
-                    // §4 butir 4: peringatan konsentrasi (ambang 0,5)
                     'concentration_warning' => $c->top_surah_share !== null && $c->top_surah_share >= 0.5,
-                ]);
+                    // PUTUSAN-08 Butir 10 — badge wajib di UI, TERLEPAS posisi
+                    // dalam daftar (baik masuk top-N alami maupun dipaksa masuk).
+                    'status_changed'  => isset($statusChangedPartners[$partner]),
+                ];
+            });
+
             if ($colls->isNotEmpty()) {
-                $variants[$variant] = $colls;
+                $variants[$variant] = [
+                    // PUTUSAN-08 §1.1 — "N dari M": shown = jumlah dikirim
+                    // (top-N + yang dipaksa masuk krn status_changed), total =
+                    // M (seluruh pasangan lolos lantai D5 di varian ini).
+                    // BREAKING CHANGE dari bentuk lama (array collocations
+                    // langsung) — sekarang dibungkus {shown,total,items}.
+                    'shown' => $colls->count(),
+                    'total' => $total,
+                    'items' => $colls->values(),
+                ];
             }
         }
 
@@ -171,28 +229,11 @@ class VerseRetrievalService
             ->first();
 
         // §4 butir 9 (D3-C, BENTUK FINAL v3 — HANDOFF-19, Opsi A diratifikasi).
-        // RIWAYAT BENTUK (K8 — dicatat supaya tak ada yang bertanya "kenapa
-        // begini" tanpa jawaban; juga direvisi in-place ke SPEC-01 §4 butir 9):
-        //   v1 (HANDOFF-14)      : angka tunggal          — profile_count: 12
-        //   v2 (HANDOFF-15 §A)   : per-varian, angka polos — {raw:12, formula_reduced:12}
-        //   v3 (HANDOFF-19, INI) : per-varian, OBJEK BERSARANG {n_ayat, profiles} —
-        //     n_ayat & profiles utk varian yang SAMA disatukan di SATU node.
-        //     Alasan mengikat (HANDOFF-19 §1): Opsi B (pakai dispersion.n_ayat
-        //     yang sudah ada) tetap menuntut UI menghubungkan DUA path terpisah
-        //     sesuai varian yang sama — itu referensi-tidak-langsung, dan bug
-        //     yang baru terjadi (UI mengambil 120 dari same_root.total /
-        //     populasi ROOT, alih-alih 101 dari populasi LEMMA yang benar,
-        //     HANDOFF-16-18) ADALAH kelas bug itu sendiri. Opsi A menghilangkan
-        //     kelas ini: n_ayat & profiles duduk di satu node, tak ada korelasi
-        //     lintas-path yang bisa salah sambung lagi.
-        //
-        // INI BENTUK FINAL — perubahan keempat TIDAK lewat patch cepat lagi
-        // (HANDOFF-19 §2). Kebutuhan baru = keputusan baru, bukan iterasi lanjutan.
-        //
-        // NULL utk item_type='root' (agregasi profil tidak relevan di situ —
-        // root sudah retrieval faktual per-kata, bukan digabung lintas bentuk
-        // morfologis spt lemma). JANGAN ambil n_ayat dari same_root.total
-        // (populasi ROOT) — HANYA dari profile_count.{variant}.n_ayat di sini.
+        // Riwayat: v1 angka tunggal -> v2 per-varian polos -> v3 (INI) objek
+        // bersarang {n_ayat,profiles}, supaya n_ayat & profiles varian yang
+        // sama duduk di SATU node (mencegah kelas bug referensi-silang yang
+        // sama seperti kasus same_root.total 120 vs lemma 101, HANDOFF-16-18).
+        // INI BENTUK FINAL — perubahan keempat tidak lewat patch cepat lagi.
         $profileCount = null;
         if ($itemType === 'lemma') {
             $profileCount = [
@@ -210,10 +251,10 @@ class VerseRetrievalService
         return [
             'available'       => !empty($variants),
             'corpus_build_id' => $build,             // §4 butir 5: auditabilitas
-            'collocations'    => $variants,          // §4 butir 3: dua varian berdampingan
-            'profile_count'   => $profileCount,      // §4 butir 9 — bentuk FINAL v3, lihat catatan di atas
+            'collocations'    => $variants,          // §4 butir 3 + Butir 10 — {shown,total,items} per varian
+            'profile_count'   => $profileCount,      // §4 butir 9 — bentuk FINAL v3
             'dispersion'      => $disp ? [
-                'n_ayat'          => $disp->n_ayat, // A4/§4 butir 7: D/DP tak terinterpretasi tanpa ini
+                'n_ayat'          => $disp->n_ayat,
                 'juilland_d'      => $disp->juilland_d !== null ? round($disp->juilland_d, 3) : null,
                 'dp'              => $disp->dp !== null ? round($disp->dp, 3) : null,
                 'top_surah_id'    => $disp->top_surah_id,
@@ -229,7 +270,9 @@ class VerseRetrievalService
                 . '(§14 aturan 3). PMI/rasio = effect size; G² = kekuatan bukti — TAPI G² '
                 . 'buta arah (positif untuk asosiasi maupun penghindaran). Field `direction` '
                 . 'WAJIB dibaca sebelum menafsirkan G²; pasangan berstatus avoidance TIDAK '
-                . 'boleh disebut "kolokasi" walau G²-nya besar (SPEC-ANALYST-01 §4 butir 6).',
+                . 'boleh disebut "kolokasi" walau G²-nya besar (SPEC-ANALYST-01 §4 butir 6). '
+                . 'Pasangan `status_changed=true` WAJIB ditandai menonjol di UI, terlepas '
+                . 'posisi peringkat G²-nya (PUTUSAN-08 Butir 10).',
         ];
     }
 
@@ -247,18 +290,13 @@ class VerseRetrievalService
             'pos'             => $w->pos,
             'morph_features'  => $w->morph_features,
             'text_uthmani'    => $w->ayah->text_uthmani,
-            'classification'  => $w->ayah->currentClassification?->classification, // muhkamat/mutasyabihat §6
+            'classification'  => $w->ayah->currentClassification?->classification,
         ];
     }
 
     /**
      * profile_count(lemma, variant) — D3-C direvisi HANDOFF-15 §A, dibungkus
-     * v3 (HANDOFF-19) via profile_count()+profileNAyat() dipanggil bersama.
-     * raw             : semua kata ber-lemma ini, dikelompokkan (text_normalized,morph_features).
-     * formula_reduced : HANYA kata yang SELAMAT dari reduksi — logika eksklusi
-     *                   PERSIS D6-E (exclude full_ayah non-first-instance,
-     *                   exclude posisi dalam rentang verse_final_ngram
-     *                   non-first-instance). Dipakai ulang, bukan ditulis ulang.
+     * v3 (HANDOFF-19) via profileCount()+profileNAyat() dipanggil bersama.
      */
     private function profileCount(string $lemma, string $variant, int $buildId): int
     {
@@ -269,9 +307,8 @@ class VerseRetrievalService
     }
 
     /**
-     * n_ayat pendamping profileCount() — HARUS memakai jalur eksklusi yang
-     * SAMA PERSIS (survivingWords()) supaya n_ayat & profiles di node yang
-     * sama selalu konsisten satu sama lain (HANDOFF-19 §1 — itulah inti Opsi A).
+     * n_ayat pendamping profileCount() — memakai jalur eksklusi yang SAMA
+     * PERSIS (survivingWords()) supaya n_ayat & profiles selalu konsisten.
      */
     private function profileNAyat(string $lemma, string $variant, int $buildId): int
     {
@@ -283,9 +320,7 @@ class VerseRetrievalService
 
     /**
      * Himpunan kata ber-lemma ini yang "selamat" pada varian tsb — logika
-     * eksklusi tunggal dipakai ULANG oleh profileCount() & profileNAyat(),
-     * supaya keduanya tidak pernah bisa berbeda sumber (mencegah kelas bug
-     * referensi-silang yang sama seperti kasus same_root.total, HANDOFF-19 §1).
+     * eksklusi tunggal dipakai ULANG oleh profileCount() & profileNAyat().
      */
     private function survivingWords(string $lemma, string $variant, int $buildId): Collection
     {
@@ -317,19 +352,16 @@ class VerseRetrievalService
         return $words->filter(function (Word $w) use ($ngramRangesByAyah) {
             foreach ($ngramRangesByAyah->get($w->ayah_id, collect()) as $r) {
                 if ($w->position_in_ayah >= $r->start_pos && $w->position_in_ayah <= $r->end_pos) {
-                    return false; // posisi ini direduksi -> tidak "selamat"
+                    return false;
                 }
             }
             return true;
         });
     }
 
-    /** Kunci profil: (text_normalized, morph_features ter-sort) — sesuai query Analyst HANDOFF-15 §A. */
+    /** Kunci profil: (text_normalized, morph_features ter-sort). */
     private function profileKey(Word $w): string
     {
-        // Word::$casts sudah men-decode morph_features jadi array (lihat
-        // app/Models/Word.php) — JANGAN json_decode() lagi di sini (itu
-        // penyebab TypeError: array diberikan, string diharapkan).
         $tags = $w->morph_features ?? [];
         sort($tags);
         return $w->text_normalized . '|' . implode(',', $tags);

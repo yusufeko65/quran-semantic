@@ -852,3 +852,81 @@ h1.page-title {
 @media (max-width: 780px) {
   .search-box { order: 10; flex-basis: 100%; max-width: none; }
 }
+
+/* ============================================================
+   PLACEHOLDER — menunggu spesifikasi UX (SPEC-UX-02)
+   ============================================================
+   Menggantikan PLACEHOLDER-qse-css-menunggu-UX.css sebelumnya (elemen
+   lama sudah dirombak jadi sistem dua-lapis). Murni tata letak fungsional
+   — TIDAK ADA keputusan warna/tipografi/motion. <details>/<summary>
+   dibiarkan gaya bawaan browser (termasuk panah default) sampai UX
+   mengirim spesifikasi lain.
+   ============================================================ */
+
+.colloc-sentence {
+  margin: 0 0 0.25em;
+  line-height: 1.5;
+}
+
+.colloc-detail-toggle {
+  margin: 0 0 0.75em;
+}
+
+.colloc-detail-toggle summary {
+  cursor: pointer;
+  font-size: 0.875em;
+  opacity: 0.75;
+}
+
+.colloc-detail {
+  margin-top: 0.5em;
+  padding-left: 1em;
+}
+
+.cd-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+  font-size: 0.875em;
+  padding: 0.15em 0;
+}
+
+.cd-label {
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.gloss-icon {
+  cursor: help;
+  font-size: 0.85em;
+}
+
+.colloc-row-flip {
+  /* Placeholder murni struktural — border kiri sbg penanda visual sementara.
+     UX kemungkinan besar ingin treatment berbeda (warna/latar/ikon khusus)
+     utk baris status-flip; ini BUKAN keputusan final. */
+  border-left: 3px solid currentColor;
+  padding-left: 0.5em;
+}
+
+.colloc-count-note {
+  font-size: 0.875em;
+  opacity: 0.85;
+  margin: 0.25em 0 0.5em;
+}
+
+.colloc-load-all {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  color: inherit;
+}
+
+.colloc-load-all:hover,
+.colloc-load-all:focus-visible {
+  opacity: 0.7;
+}
