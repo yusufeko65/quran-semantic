@@ -228,9 +228,31 @@
     input.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDropdown(); });
   }
 
+    function initNavToggle() {
+    const btn = document.getElementById('nav-toggle');
+    const nav = document.getElementById('site-nav');
+    if (!btn || !nav) return;
+
+    btn.addEventListener('click', () => {
+      const isOpen = nav.classList.toggle('nav-open');
+      btn.setAttribute('aria-expanded', String(isOpen));
+    });
+
+    // Tutup otomatis saat viewport melebar balik ke desktop (hindari
+    // state "nav-open" tertinggal kalau pengguna resize/putar layar).
+    const mq = window.matchMedia('(min-width: 781px)');
+    mq.addEventListener('change', (e) => {
+      if (e.matches) {
+        nav.classList.remove('nav-open');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     initThemeToggle();
     initHeaderSearch();
+    initNavToggle();
 
     const panel = document.getElementById('word-detail');
     if (!panel) return;

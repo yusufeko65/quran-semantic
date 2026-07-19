@@ -27,7 +27,11 @@
             Quran Semantic Explorer
             <small>Jurnal Penelitian Linguistik — Data Driven</small>
         </a>
-        <nav class="site-nav">
+        <button type="button" id="nav-toggle" class="nav-toggle"
+                aria-expanded="false" aria-controls="site-nav">
+            ☰ Menu
+        </button>
+        <nav class="site-nav" id="site-nav">
             <a href="{{ route('qse.page.home') }}" class="{{ request()->routeIs('qse.page.home') ? 'active' : '' }}">Surah</a>
             <a href="{{ route('qse.page.roots') }}" class="{{ request()->routeIs('qse.page.roots') ? 'active' : '' }}">Root</a>
             <a href="{{ route('qse.page.hypotheses') }}" class="{{ request()->routeIs('qse.page.hypotheses') ? 'active' : '' }}">Jurnal Hipotesis</a>

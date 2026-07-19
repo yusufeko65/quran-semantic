@@ -930,3 +930,49 @@ h1.page-title {
 .colloc-load-all:focus-visible {
   opacity: 0.7;
 }
+
+.nav-toggle {
+  display: none; /* tersembunyi di desktop, muncul di breakpoint bawah */
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+  color: var(--ink-soft);
+}
+.nav-toggle:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+@media (max-width: 780px) {
+  .site-header {
+    flex-wrap: wrap;
+  }
+  .nav-toggle {
+    display: inline-block;
+  }
+  .site-nav {
+    /* Tersembunyi default di mobile; dibuka via .nav-open (JS) */
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.8rem;
+    width: 100%;
+    order: 10;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+  }
+  .site-nav.nav-open {
+    display: flex;
+  }
+  .site-nav a {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .search-box {
+    order: unset; /* kembalikan urutan alami di dalam stack vertikal mobile */
+    max-width: none;
+    flex-basis: auto;
+  }
+}
