@@ -53,9 +53,9 @@
         (r.base_meaning ? ` — ${esc(r.base_meaning)}` : '') + `</p>`;
       if (l2.proto_semitic) {
         const p = l2.proto_semitic;
-        body += `<p class="wd-line wd-sub">Proto-Semitik <span class="wd-mono">${esc(p.form || '')}</span>` +
-          (p.meaning ? ` — ${esc(p.meaning)}` : '') + `</p>`;
-        body += `<span class="wd-badge proto">${esc(p.status || 'HIPOTESIS AKADEMIK — pra-Qur\'ani')}</span>`;
+        body += '<p class="wd-line wd-sub">Proto-Semitik <span class="wd-mono">' + esc(p.form || '') + '</span>' +
+          (p.meaning ? ' — ' + esc(p.meaning) : '') + '</p>';
+        body += '<span class="wd-badge proto">' + esc(p.status || 'HIPOTESIS AKADEMIK — pra-Qur\'ani') + '</span>';
         if (p.source) basis += ` Proto-Semitik: ${p.source}, status hipotesis.`;
       }
     } else {
@@ -72,7 +72,7 @@
   function stamp(v) {
     if (!v) return '';
     const key = String(v).toLowerCase();
-    return `<span class="wd-stamp ${esc(key)}">${esc(VERDICTS[key] || String(v).toUpperCase())}</span>`;
+    return '<span class="wd-stamp ' + esc(key) + '">' + esc(VERDICTS[key] || String(v).toUpperCase()) + '</span>';
   }
 
   /* ---- Lapisan 4: Hasil Analisa Sementara (Tier 1 cache) ---- */
@@ -81,7 +81,7 @@
     let html = `<div class="wd-layer">${layerHead(4, 'Hasil Analisa Sementara')}`;
 
     if (l4.status === 'TERSEDIA') {
-      html += `<span class="analysis-label">${esc(l4.label || 'HASIL ANALISA SEMENTARA')}</span>`;
+      html += '<span class="analysis-label">' + esc(l4.label || 'HASIL ANALISA SEMENTARA') + '</span>';
       html += stamp(l4.verdict);
       const content = typeof l4.content === 'string' ? l4.content : JSON.stringify(l4.content, null, 2);
       html += `<div class="wd-content">${esc(content)}</div>`;
@@ -101,10 +101,10 @@
 
   function renderWord(data) {
     const w = data.word || {};
-    const meta = `<div class="wd-meta"><span class="wd-ar-lg">${esc(w.form)}</span>` +
-      `<span class="wd-mono">${esc(w.ref || '')}` +
-      `${w.qac_location ? ' · ' + esc(w.qac_location) : ''}` +
-      `${w.pos ? ' · ' + esc(w.pos) : ''}</span></div>`;
+    const meta = '<div class="wd-meta"><span class="wd-ar-lg">' + esc(w.form) + '</span>' +
+      '<span class="wd-mono">' + esc(w.ref || '') +
+      (w.qac_location ? ' · ' + esc(w.qac_location) : '') +
+      (w.pos ? ' · ' + esc(w.pos) : '') + '</span></div>';
     return meta +
       renderPhoneme(data.layer1_phoneme) +
       renderRoot(data.layer2_root) +
