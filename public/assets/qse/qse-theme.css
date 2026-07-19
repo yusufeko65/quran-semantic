@@ -146,6 +146,166 @@
 .theme-toggle .state { color: var(--gold); font-weight: 600; }
 
 /* ------------------------------------------------------------
+   §4 — Tipografi Modern v2: Source Serif 4 utk display, Inter tetap
+   utk body + UI chrome. Ini MENIMPA nilai --font-display Modern yang
+   sekarang ('Inter') — --font-body TIDAK berubah.
+   ------------------------------------------------------------ */
+:root {
+  --font-display: 'Source Serif 4', serif;
+  /* --font-body tetap 'Inter' (tidak diulang di sini, sudah benar) */
+}
+
+/* ------------------------------------------------------------
+   §2 — Token hirarki dua-tingkat (payung D-UX-05)
+   ------------------------------------------------------------ */
+:root {
+  --tier1-font-size: 0.74rem;
+  --tier1-accent-width: 5px;
+  --tier1-radius: 3px;      /* sudut kecil 2-4px, BUKAN 999px */
+  --tier2-font-size: 0.65rem; /* tetap seperti sekarang, dicatat eksplisit sbg token */
+}
+
+/* ------------------------------------------------------------
+   §3.1 — Verdict stamp: dari pil/lingkaran jadi tab bersegel.
+   Animasi masuk TIDAK diubah (fade+translateY sudah ada) — hanya
+   bentuk akhir. Ditambah tanda geometris per status (taksonomi tetap).
+   ------------------------------------------------------------ */
+.wd-stamp,
+.verdict-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  width: auto;
+  height: auto;
+  font-family: var(--font-mono);
+  font-size: var(--tier1-font-size);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: none;
+  border-left: var(--tier1-accent-width) solid currentColor;
+  border-radius: var(--tier1-radius);
+  background: color-mix(in srgb, currentColor 6%, var(--paper-panel));
+  padding: 0.3rem 0.65rem;
+  transform: none; /* hilangkan rotate stempel lama, konsisten "tab" bukan "cap" */
+  line-height: 1.2;
+}
+
+/* Tanda geometris per status — karakter biasa, bukan ikon custom (§3.1) */
+.wd-stamp.sync::before,
+.verdict-stamp.sync::before          { content: '✓'; }
+.wd-stamp.partial::before,
+.verdict-stamp.partial::before       { content: '◐'; }
+.wd-stamp.contradicted::before,
+.verdict-stamp.contradicted::before  { content: '✕'; }
+.wd-stamp.insufficient::before,
+.verdict-stamp.insufficient::before  { content: '–'; }
+.wd-stamp.beyond_scope::before,
+.verdict-stamp.beyond_scope::before  { content: '◆'; }
+
+/* .stamp-mini (kartu jurnal hipotesis) mengikuti bentuk baru — lebar
+   tetap mengikuti konten (auto), bukan kotak tetap 3rem persegi lagi. */
+.hyp-card .stamp-mini {
+  width: auto;
+  height: auto;
+  font-size: 0.68rem;
+}
+
+/* Animasi masuk dipertahankan persis (dari qse-theme.css manuscript,
+   dipakai jg utk Modern supaya konsisten "muncul", bukan statis) */
+@keyframes qse-stamp-in-modern {
+  0%   { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.wd-stamp, .verdict-stamp {
+  animation: qse-stamp-in-modern 0.28s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wd-stamp, .verdict-stamp { animation: none; }
+}
+
+/* ------------------------------------------------------------
+   §3.2 — Classification-tag: pindah ke mushaf-head, Tier 1.
+   ASUMSI STRUKTUR (lihat catatan kepala file): elemen sudah/akan
+   ditaruh di dalam .mushaf-head sebaris dgn .ref-badge. Kalau HTML
+   Blade belum begitu, sesuaikan dulu — CSS ini menunggu markup itu.
+   ------------------------------------------------------------ */
+.mushaf-head .classification-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: var(--tier1-font-size);
+  font-family: var(--font-mono);
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--tier1-radius);
+  background: transparent;
+}
+.mushaf-head .classification-tag.muhkamat {
+  border-left: var(--tier1-accent-width) solid var(--gold);
+  color: var(--gold);
+}
+.mushaf-head .classification-tag.mutasyabihat {
+  border-left: var(--tier1-accent-width) solid var(--rose);
+  color: var(--rose);
+}
+/* .dot dipertahankan sbg elemen TAMBAHAN, bukan pengganti garis tepi (§3.2) */
+.mushaf-head .classification-tag .dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor;
+}
+
+/* ------------------------------------------------------------
+   §3.3 — Status-flip marker (.colloc-row-flip): Tier 1, TIDAK pil.
+   Menggantikan placeholder sementara dari paket SPEC-UX-02 kemarin.
+   ------------------------------------------------------------ */
+.colloc-row-flip {
+  border-left: var(--tier1-accent-width) solid var(--verdict-partial);
+  padding-left: 0.6rem;
+  background: color-mix(in srgb, var(--verdict-partial) 5%, transparent);
+}
+.colloc-row-flip .colloc-sentence::before {
+  content: '⇄ ';
+  font-weight: 600;
+  color: var(--verdict-partial);
+}
+
+/* ------------------------------------------------------------
+   §3.4 — Ikon ⓘ / glosarium: Tier 2, paling ringan di hirarki.
+   Menggantikan .gloss-icon placeholder sementara.
+   ------------------------------------------------------------ */
+.gloss-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1em;
+  height: 1.1em;
+  border-radius: 50%;
+  border: 1px solid var(--rule-strong);
+  color: var(--ink-faint);
+  font-size: 0.7em;
+  background: none;
+  cursor: help;
+  vertical-align: middle;
+}
+
+/* Kalau UX/Fullstack memutuskan glosarium jadi <details><summary>ⓘ</summary>
+   (native, sesuai §3.4) alih-alih atribut title — style ⓘ sbg summary: */
+.gloss-detail summary {
+  list-style: none;
+  cursor: pointer;
+}
+.gloss-detail summary::-webkit-details-marker { display: none; }
+.gloss-detail summary::marker { content: ''; }
+.gloss-detail[open] summary .gloss-icon {
+  border-color: var(--ink-soft);
+}
+.gloss-detail .gloss-popover-content {
+  font-size: 0.65rem; /* setara .strip-note, sesuai §3.4 */
+  color: var(--ink-soft);
+  margin-top: 0.3rem;
+  max-width: 24rem;
+}
+
+/* ------------------------------------------------------------
    C. TEMA MANUSKRIP (alternatif) — dipulihkan persis seperti semula
    saat html[data-theme="manuscript"] aktif. Tidak ada yang hilang,
    hanya tidak default lagi.

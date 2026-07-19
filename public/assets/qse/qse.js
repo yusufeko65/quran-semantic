@@ -290,7 +290,9 @@
     fdr: 'FDR (koreksi uji berganda) — karena banyak pasangan diuji sekaligus, angka ini mengoreksi supaya "temuan" yang sebenarnya kebetulan tidak ikut lolos sebagai signifikan.',
     dispersion: 'D / DP (dispersi) — seberapa merata kata ini tersebar di seluruh Qur\'an, dibanding menumpuk di sedikit surah/ayat saja.',
   };
-  const glossIcon = (key) => `<span class="gloss-icon" title="${esc(GLOSS[key] || '')}">ⓘ</span>`;
+  const glossIcon = (key) =>
+    `<details class="gloss-detail"><summary><span class="gloss-icon">ⓘ</span></summary>` +
+    `<div class="gloss-popover-content">${esc(GLOSS[key] || '')}</div></details>`;
 
   /* ---- §2 SPEC-UX-02: kalimat lapis utama, 5 skenario ---- */
   function mainSentence(c, otherVariantRow) {
