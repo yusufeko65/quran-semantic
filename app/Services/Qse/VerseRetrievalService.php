@@ -145,10 +145,10 @@ class VerseRetrievalService
                     'ratio'           => $c->expected > 0 ? round($c->n_ab / $c->expected, 1) : null,
                     'pmi'             => $c->pmi !== null ? round($c->pmi, 2) : null, // §4: PMI+G² berdampingan
                     'g2'              => round($c->g2, 1),
-                    // §4 butir 6 (T3, REVIEW-ANALYST-01): G² buta arah — positif baik
-                    // untuk asosiasi MAUPUN penghindaran. Arah WAJIB eksplisit dari
-                    // n_ab vs expected. Pasangan 'avoidance' TIDAK boleh disebut
-                    // "kolokasi" oleh UI walau G²-nya besar (jebakan TC#9).
+                    // §4 butir 6 (T3): G² buta arah — positif baik untuk asosiasi
+                    // MAUPUN penghindaran. Arah WAJIB eksplisit dari n_ab vs expected.
+                    // Pasangan 'avoidance' TIDAK boleh disebut "kolokasi" walau G²-nya
+                    // besar (jebakan TC#9).
                     'direction'       => $c->n_ab > $c->expected ? 'association'
                         : ($c->n_ab < $c->expected ? 'avoidance' : 'neutral'),
                     'p_permutation'   => $c->p_permutation, // NULL bila n_ab=0: "uji arah-asosiasi tak berlaku" (D6-B)
@@ -170,22 +170,40 @@ class VerseRetrievalService
             ->where('item_ref', $itemRef)
             ->first();
 
-        // §4 butir 9 (D3-C, DIREVISI HANDOFF-15 §A) — profile_count adalah
-        // properti (lemma × variant), BUKAN invariant. HANYA utk lemma.
-        // Memakai ULANG logika eksklusi D6-E (full_ayah + verse_final_ngram
-        // via formula_occurrences) — bukan ditulis ulang, supaya definisi
-        // "selamat dari reduksi" konsisten dgn n_total/n_scope di tempat lain.
+        // §4 butir 9 (D3-C, BENTUK FINAL v3 — HANDOFF-19, Opsi A diratifikasi).
+        // RIWAYAT BENTUK (K8 — dicatat supaya tak ada yang bertanya "kenapa
+        // begini" tanpa jawaban; juga direvisi in-place ke SPEC-01 §4 butir 9):
+        //   v1 (HANDOFF-14)      : angka tunggal          — profile_count: 12
+        //   v2 (HANDOFF-15 §A)   : per-varian, angka polos — {raw:12, formula_reduced:12}
+        //   v3 (HANDOFF-19, INI) : per-varian, OBJEK BERSARANG {n_ayat, profiles} —
+        //     n_ayat & profiles utk varian yang SAMA disatukan di SATU node.
+        //     Alasan mengikat (HANDOFF-19 §1): Opsi B (pakai dispersion.n_ayat
+        //     yang sudah ada) tetap menuntut UI menghubungkan DUA path terpisah
+        //     sesuai varian yang sama — itu referensi-tidak-langsung, dan bug
+        //     yang baru terjadi (UI mengambil 120 dari same_root.total /
+        //     populasi ROOT, alih-alih 101 dari populasi LEMMA yang benar,
+        //     HANDOFF-16-18) ADALAH kelas bug itu sendiri. Opsi A menghilangkan
+        //     kelas ini: n_ayat & profiles duduk di satu node, tak ada korelasi
+        //     lintas-path yang bisa salah sambung lagi.
         //
-        // Diverifikasi thd data SEBELUM kode ini: profile_count(raw)=12,
-        // profile_count(formula_reduced)=12 utk عَزِيز — SAMA, membantah
-        // dugaan terstruktur Analyst (HANDOFF-15) bahwa reduksi formulaik
-        // membuang SATU profil ["ADJ","INDEF","MS","NOM"] seluruhnya (turun
-        // 11->8 kemunculan, tapi tidak nol — profil itu tetap ada).
+        // INI BENTUK FINAL — perubahan keempat TIDAK lewat patch cepat lagi
+        // (HANDOFF-19 §2). Kebutuhan baru = keputusan baru, bukan iterasi lanjutan.
+        //
+        // NULL utk item_type='root' (agregasi profil tidak relevan di situ —
+        // root sudah retrieval faktual per-kata, bukan digabung lintas bentuk
+        // morfologis spt lemma). JANGAN ambil n_ayat dari same_root.total
+        // (populasi ROOT) — HANYA dari profile_count.{variant}.n_ayat di sini.
         $profileCount = null;
         if ($itemType === 'lemma') {
             $profileCount = [
-                'raw'             => $this->profileCount($itemRef, 'raw', $build),
-                'formula_reduced' => $this->profileCount($itemRef, 'formula_reduced', $build),
+                'raw' => [
+                    'n_ayat'   => $this->profileNAyat($itemRef, 'raw', $build),
+                    'profiles' => $this->profileCount($itemRef, 'raw', $build),
+                ],
+                'formula_reduced' => [
+                    'n_ayat'   => $this->profileNAyat($itemRef, 'formula_reduced', $build),
+                    'profiles' => $this->profileCount($itemRef, 'formula_reduced', $build),
+                ],
             ];
         }
 
@@ -193,12 +211,7 @@ class VerseRetrievalService
             'available'       => !empty($variants),
             'corpus_build_id' => $build,             // §4 butir 5: auditabilitas
             'collocations'    => $variants,          // §4 butir 3: dua varian berdampingan
-            // §4 butir 9 (D3-C direvisi) — objek {raw, formula_reduced},
-            // BUKAN lagi angka tunggal (breaking change dari implementasi
-            // sebelumnya — lihat catatan handoff ke UI). NULL utk root.
-            // UI WAJIB memilih angka sesuai variant yang sedang ditampilkan
-            // — JANGAN menampilkan raw saat formula_reduced aktif (D3-C).
-            'profile_count'   => $profileCount,
+            'profile_count'   => $profileCount,      // §4 butir 9 — bentuk FINAL v3, lihat catatan di atas
             'dispersion'      => $disp ? [
                 'n_ayat'          => $disp->n_ayat, // A4/§4 butir 7: D/DP tak terinterpretasi tanpa ini
                 'juilland_d'      => $disp->juilland_d !== null ? round($disp->juilland_d, 3) : null,
@@ -239,7 +252,8 @@ class VerseRetrievalService
     }
 
     /**
-     * profile_count(lemma, variant) — D3-C direvisi HANDOFF-15 §A.
+     * profile_count(lemma, variant) — D3-C direvisi HANDOFF-15 §A, dibungkus
+     * v3 (HANDOFF-19) via profile_count()+profileNAyat() dipanggil bersama.
      * raw             : semua kata ber-lemma ini, dikelompokkan (text_normalized,morph_features).
      * formula_reduced : HANYA kata yang SELAMAT dari reduksi — logika eksklusi
      *                   PERSIS D6-E (exclude full_ayah non-first-instance,
@@ -248,44 +262,66 @@ class VerseRetrievalService
      */
     private function profileCount(string $lemma, string $variant, int $buildId): int
     {
+        return $this->survivingWords($lemma, $variant, $buildId)
+            ->map(fn (Word $w) => $this->profileKey($w))
+            ->unique()
+            ->count();
+    }
+
+    /**
+     * n_ayat pendamping profileCount() — HARUS memakai jalur eksklusi yang
+     * SAMA PERSIS (survivingWords()) supaya n_ayat & profiles di node yang
+     * sama selalu konsisten satu sama lain (HANDOFF-19 §1 — itulah inti Opsi A).
+     */
+    private function profileNAyat(string $lemma, string $variant, int $buildId): int
+    {
+        return $this->survivingWords($lemma, $variant, $buildId)
+            ->pluck('ayah_id')
+            ->unique()
+            ->count();
+    }
+
+    /**
+     * Himpunan kata ber-lemma ini yang "selamat" pada varian tsb — logika
+     * eksklusi tunggal dipakai ULANG oleh profileCount() & profileNAyat(),
+     * supaya keduanya tidak pernah bisa berbeda sumber (mencegah kelas bug
+     * referensi-silang yang sama seperti kasus same_root.total, HANDOFF-19 §1).
+     */
+    private function survivingWords(string $lemma, string $variant, int $buildId): Collection
+    {
         $query = Word::query()->where('lemma', $lemma)
             ->select('id', 'ayah_id', 'position_in_ayah', 'text_normalized', 'morph_features');
 
-        if ($variant === 'formula_reduced') {
-            $excludedFullAyah = DB::table('formula_occurrences as fo')
-                ->join('formulas as f', 'f.id', '=', 'fo.formula_id')
-                ->where('f.corpus_build_id', $buildId)
-                ->where('f.kind', 'full_ayah')
-                ->where('fo.is_first_instance', 0)
-                ->pluck('fo.ayah_id');
-
-            $query->whereNotIn('ayah_id', $excludedFullAyah);
+        if ($variant !== 'formula_reduced') {
+            return $query->get();
         }
 
-        $words = $query->get();
+        $excludedFullAyah = DB::table('formula_occurrences as fo')
+            ->join('formulas as f', 'f.id', '=', 'fo.formula_id')
+            ->where('f.corpus_build_id', $buildId)
+            ->where('f.kind', 'full_ayah')
+            ->where('fo.is_first_instance', 0)
+            ->pluck('fo.ayah_id');
 
-        if ($variant === 'formula_reduced') {
-            // Rentang verse_final_ngram non-first-instance, dikelompokkan per ayah
-            $ngramRangesByAyah = DB::table('formula_occurrences as fo')
-                ->join('formulas as f', 'f.id', '=', 'fo.formula_id')
-                ->where('f.corpus_build_id', $buildId)
-                ->where('f.kind', 'verse_final_ngram')
-                ->where('fo.is_first_instance', 0)
-                ->select('fo.ayah_id', 'fo.start_pos', 'fo.end_pos')
-                ->get()
-                ->groupBy('ayah_id');
+        $words = $query->whereNotIn('ayah_id', $excludedFullAyah)->get();
 
-            $words = $words->filter(function (Word $w) use ($ngramRangesByAyah) {
-                foreach ($ngramRangesByAyah->get($w->ayah_id, collect()) as $r) {
-                    if ($w->position_in_ayah >= $r->start_pos && $w->position_in_ayah <= $r->end_pos) {
-                        return false; // posisi ini direduksi -> tidak "selamat"
-                    }
+        $ngramRangesByAyah = DB::table('formula_occurrences as fo')
+            ->join('formulas as f', 'f.id', '=', 'fo.formula_id')
+            ->where('f.corpus_build_id', $buildId)
+            ->where('f.kind', 'verse_final_ngram')
+            ->where('fo.is_first_instance', 0)
+            ->select('fo.ayah_id', 'fo.start_pos', 'fo.end_pos')
+            ->get()
+            ->groupBy('ayah_id');
+
+        return $words->filter(function (Word $w) use ($ngramRangesByAyah) {
+            foreach ($ngramRangesByAyah->get($w->ayah_id, collect()) as $r) {
+                if ($w->position_in_ayah >= $r->start_pos && $w->position_in_ayah <= $r->end_pos) {
+                    return false; // posisi ini direduksi -> tidak "selamat"
                 }
-                return true;
-            });
-        }
-
-        return $words->map(fn (Word $w) => $this->profileKey($w))->unique()->count();
+            }
+            return true;
+        });
     }
 
     /** Kunci profil: (text_normalized, morph_features ter-sort) — sesuai query Analyst HANDOFF-15 §A. */

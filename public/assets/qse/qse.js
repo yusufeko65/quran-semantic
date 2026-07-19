@@ -84,19 +84,20 @@
 
     // Butir 9 (D3-C, revisi HANDOFF-15 §A): profile_count kini OBJEK
     // {raw, formula_reduced} — dua populasi berbeda, TIDAK BOLEH dicampur.
-    // Setiap catatan profil ditempel pada variantnya sendiri, dengan angka
-    // ayat milik variant itu sendiri pula (raw: same_root.total; reduced:
-    // belum ada field ayat-per-variant yang terkonfirmasi di payload ini —
-    // ditampilkan tanpa angka ayat daripada menebak/mencampur populasi).
-    const profileCount = stats.profile_count; // null (root) | {raw, formula_reduced} (lemma)
+    // v3 (HANDOFF-19, Opsi A): profile_count.{variant} kini OBJEK {n_ayat, profiles},
+    // bukan angka langsung. KEDUA angka di sini WAJIB berasal dari profile_count
+    // sendiri (level lemma) — same_root.total (level ROOT) tidak pernah dipakai
+    // di catatan ini lagi. Itu akar bug sebelumnya: raw sempat memakai
+    // same_root.total (populasi root, 120) alih-alih profile_count.raw.n_ayat
+    // (populasi lemma, 101) — kebetulan tidak ketahuan karena formula_reduced
+    // sengaja tidak ditampilkan dulu (belum ada field-nya saat itu).
+    const profileCount = stats.profile_count; // null (root) | {raw:{n_ayat,profiles}, formula_reduced:{n_ayat,profiles}} (lemma)
     const profileNote = (variantKey) => {
-      if (!profileCount || profileCount[variantKey] == null) return '';
-      const n = profileCount[variantKey];
-      const ayatPart = variantKey === 'raw' && sameRoot.total != null
-        ? `<strong>${esc(sameRoot.total)} ayat</strong>, `
-        : '';
+      const pc = profileCount && profileCount[variantKey];
+      if (!pc || pc.profiles == null) return '';
+      const ayatPart = pc.n_ayat != null ? `<strong>${esc(pc.n_ayat)} ayat</strong>, ` : '';
       return `<div class="colloc-profile-note">` +
-        `${ayatPart}<strong>${esc(n)} profil gramatikal berbeda</strong> diagregasi jadi satu angka ` +
+        `${ayatPart}<strong>${esc(pc.profiles)} profil gramatikal berbeda</strong> diagregasi jadi satu angka ` +
         `pada varian ini (item_type=lemma, §4 butir 9). Biaya definisi operasional, bukan kekurangan data.` +
         `</div>`;
     };
