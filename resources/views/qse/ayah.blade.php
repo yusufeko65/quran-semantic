@@ -77,6 +77,20 @@
         <section class="mushaf" aria-label="Mushaf ayat {{ $ayah->ref }}">
             <div class="mushaf-head">
                 <span class="ref-badge">{{ $ayah->ref }} · {{ $ayah->surah->transliteration }}</span>
+
+                {{-- HANDOFF-22: classification-tag DIPINDAHKAN ke sini (sebaris
+                     dengan .ref-badge, di dalam .mushaf-head), sesuai spesifikasi
+                     asli SPEC-UX-03 §3.2. Sebelumnya berdiri sendiri sbg saudara
+                     .mushaf-head di akhir section — itu sebabnya selector CSS
+                     descendant ".mushaf-head .classification-tag" tak pernah
+                     cocok dan tampilan jatuh ke aturan lama (pil). --}}
+                @if ($ayah->currentClassification)
+                    <div class="classification-tag {{ $ayah->currentClassification->classification }}">
+                        <span class="dot"></span>
+                        {{ strtoupper($ayah->currentClassification->classification) }} — Manifest §6
+                    </div>
+                @endif
+
                 @if ($hasTajwid)
                     <button type="button" class="tajwid-toggle" id="tajwid-toggle"
                             aria-pressed="true" aria-controls="mushaf-text">
@@ -127,12 +141,9 @@
                 </div>
             @endif
 
-            @if ($ayah->currentClassification)
-                <div class="classification-tag {{ $ayah->currentClassification->classification }}">
-                    <span class="dot"></span>
-                    {{ strtoupper($ayah->currentClassification->classification) }} — Manifest §6
-                </div>
-            @endif
+            {{-- HANDOFF-22: blok classification-tag LAMA (di sini) DIHAPUS —
+                 sudah dipindah ke dalam .mushaf-head di atas. Jangan dikembalikan,
+                 jangan sampai dobel. --}}
         </section>
 
         {{-- ————————————— TERJEMAHAN AYAT ————————————— --}}
