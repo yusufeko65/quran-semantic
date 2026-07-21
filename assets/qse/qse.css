@@ -976,23 +976,3 @@ h1.page-title {
     flex-basis: auto;
   }
 }
-
-/* ============================================================
-   PERBAIKAN BUG — pemisahan PMI/G² saat ⓘ expand
-   (laporan UX pasca-verifikasi SPEC-UX-03)
-   ============================================================ */
-
-.cd-row-pmig2 .cd-pmig2-values {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.6em;
-}
-.cd-term {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.2em;
-}
-.cd-term .gloss-detail {
-  display: inline-block;
-}
