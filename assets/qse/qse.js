@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const API = (id) => `/qse/api/word/${id}`;
+  const API = (id) => `${window.QSE_BASE_URL || ''}/qse/api/word/${id}`;
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
@@ -167,6 +167,7 @@
     const dropdown = document.getElementById('search-dropdown');
     if (!input || !dropdown) return;
 
+    const BASE = window.QSE_BASE_URL || '';
     let debounceTimer = null;
     let activeController = null;
 
@@ -184,7 +185,7 @@
       if (roots.length) {
         html += '<p class="search-group-label">Root</p>';
         roots.forEach((r) => {
-          html += `<a class="search-item" href="/qse/root/${esc(r.id)}">` +
+          html += `<a class="search-item" href="${BASE}/qse/root/${esc(r.id)}">` +
             `<span class="search-item-ar">${esc(r.arabic)}</span>` +
             `<span class="wd-mono">${esc(r.transliteration || '')}</span></a>`;
         });
@@ -192,12 +193,14 @@
       if (words.length) {
         html += '<p class="search-group-label">Kata</p>';
         words.forEach((w) => {
+          // w.url datang dari SearchController.php — SUDAH benar (route()),
+          // dipakai apa adanya, TIDAK perlu ditambah BASE lagi di sini.
           html += `<a class="search-item" href="${esc(w.url || '#')}">` +
             `<span class="search-item-ar">${esc(w.text_uthmani)}</span>` +
             `<span class="wd-mono">${esc(w.ref || '')}</span></a>`;
         });
       }
-      html += `<a class="search-item search-item-all" href="/qse/cari?q=${encodeURIComponent(q)}">Lihat semua hasil untuk "${esc(q)}" →</a>`;
+      html += `<a class="search-item search-item-all" href="${BASE}/qse/cari?q=${encodeURIComponent(q)}">Lihat semua hasil untuk "${esc(q)}" →</a>`;
       dropdown.innerHTML = html;
       dropdown.hidden = false;
     };
@@ -211,7 +214,7 @@
       debounceTimer = setTimeout(async () => {
         activeController = new AbortController();
         try {
-          const res = await fetch(`/qse/api/search?q=${encodeURIComponent(q)}&limit=5`, {
+          const res = await fetch(`${BASE}/qse/api/search?q=${encodeURIComponent(q)}&limit=5`, {
             headers: { Accept: 'application/json' }, signal: activeController.signal,
           });
           if (!res.ok) throw new Error('HTTP ' + res.status);

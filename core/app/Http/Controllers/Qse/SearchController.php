@@ -100,9 +100,14 @@ class SearchController extends Controller
                 'lemma'        => $w->lemma,
                 'ref'          => $w->ayah->surah_id . ':' . $w->ayah->number_in_surah . ':' . $w->position_in_ayah,
                 'surah'        => $w->ayah->surah->transliteration,
-                // §2 handoff v2: anchor #word-{id} utk scroll-to-word (dibangun
-                // menyusul di sisi UI — kita hanya wajib mengirim URL-nya).
-                'url'          => "/qse/ayah/{$w->ayah->surah_id}/{$w->ayah->number_in_surah}#word-{$w->id}",
+                // PERBAIKAN (laporan 404 subdirectory): sebelumnya hardcode
+                // string "/qse/ayah/{surah}/{ayah}#word-{id}" — path absolut
+                // dari ROOT DOMAIN, salah kalau app di-hosting di subdirectory
+                // (mis. lokal: /quran-semantic). route() SELALU menghasilkan
+                // URL yang benar sesuai base terdeteksi Laravel, baik app di
+                // root domain (hosting) maupun subdirectory (lokal).
+                'url'          => route('qse.page.ayah', [$w->ayah->surah_id, $w->ayah->number_in_surah])
+                    . '#word-' . $w->id,
             ])->values()->all();
     }
 

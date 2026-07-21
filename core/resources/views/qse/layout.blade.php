@@ -53,6 +53,13 @@
         @yield('content')
     </main>
 
+    {{-- PERBAIKAN 404 subdirectory: qse.js sebelumnya hardcode path absolut
+         dari ROOT DOMAIN (mis. `/qse/api/word/...`) — cocok kalau app di
+         root domain (hosting), tapi salah kalau app ada di subdirectory
+         (lokal: /quran-semantic). url('/') Laravel SELALU tahu base yang
+         benar (baik root domain maupun subdirectory), jadi qse.js cukup
+         membaca window.QSE_BASE_URL alih-alih hardcode sendiri. --}}
+    <script>window.QSE_BASE_URL = @json(rtrim(url('/'), '/'));</script>
     <script src="{{ asset('assets/qse/qse.js') }}"></script>
     @yield('scripts')
 </body>
