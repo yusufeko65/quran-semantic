@@ -1,5 +1,5 @@
 <?php
-
+use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 
@@ -11,10 +11,15 @@ if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php'))
 }
 
 // Register the Composer autoloader...
-require __DIR__.'/../vendor/autoload.php';
+require __DIR__.'/core/vendor/autoload.php';
 
 // Bootstrap Laravel and handle the request...
 /** @var Application $app */
-$app = require_once __DIR__.'/../bootstrap/app.php';
+$app = require_once __DIR__.'/core/bootstrap/app.php';
+$app->usePublicPath(__DIR__);   // ← baris penting, jelaskan di bawah
 
-$app->handleRequest(Request::capture());
+$kernel = $app->make(Kernel::class);
+$response = $kernel->handle($request = Request::capture())->send();
+$kernel->terminate($request, $response);
+
+// $app->handleRequest(Request::capture());
