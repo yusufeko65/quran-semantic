@@ -305,7 +305,9 @@
     return `${mantissa.replace('.', ',')} × 10${expStr}`;
   }
 
-  /* ---- §5 SPEC-UX-02: glosarium (title native, bukan komponen custom) ---- */
+  /* ---- §5 SPEC-UX-02 + §3.4 SPEC-UX-03: glosarium via <details> native
+     (BUKAN title attribute lagi — UX eksplisit minta pola ini di §3.4,
+     supaya bisa dibuka via keyboard tanpa hover). ---- */
   const GLOSS = {
     pmi: 'PMI — seberapa besar dua kata "tertarik" muncul bersama dibanding kebetulan semata. Ukuran besaran (effect size), bukan bukti seberapa yakin kita.',
     g2: 'G² — seberapa kuat bukti bahwa pola ini bukan kebetulan. Kekuatan bukti, tapi tidak menunjukkan arah — selalu dibaca bersama label association/avoidance.',
@@ -375,8 +377,20 @@
       `<span class="wd-mono">n=${esc(c.n_ab)} · expected=${esc(c.expected)} · ` +
       `${c.ratio != null ? esc(c.ratio) + '×' : '–'}</span></div>`);
 
-    rows.push(`<div class="cd-row"><span class="cd-label">PMI ${glossIcon('pmi')} / G² ${glossIcon('g2')}</span>` +
-      `<span class="wd-mono">PMI=${esc(c.pmi)} · G²=${esc(c.g2)} — arah: ${esc(c.direction)}</span></div>`);
+    // PERBAIKAN (laporan UX pasca-verifikasi visual): sebelumnya KEDUA ikon
+    // glosarium (PMI, G²) dijejalkan dalam SATU <span class="cd-label">
+    // yang terpisah dari nilai (di <span class="wd-mono"> lain) — saat
+    // salah satu <details> di-expand, tata letak terganggu dan PMI/G² tidak
+    // lagi "selalu berdampingan" (pelanggaran SPEC-UX-02 §3 butir 2).
+    // Diperbaiki: setiap istilah (nilai + ikon + expand-nya sendiri) jadi
+    // SATU unit mandiri (.cd-term) — expand salah satu tidak menggeser yang
+    // lain, karena keduanya tetap bertetangga dalam wadah yang sama.
+    rows.push(`<div class="cd-row cd-row-pmig2"><span class="cd-label">Kekuatan bukti</span>` +
+      `<span class="wd-mono cd-pmig2-values">` +
+      `<span class="cd-term">PMI=${esc(c.pmi)} ${glossIcon('pmi')}</span>` +
+      `<span class="cd-term">G²=${esc(c.g2)} ${glossIcon('g2')}</span>` +
+      ` — arah: ${esc(c.direction)}` +
+      `</span></div>`);
 
     if (c.p_permutation != null) {
       // Hanya tampilkan bentuk ringkas+label terpisah kalau itu MENAMBAH info
@@ -411,6 +425,23 @@
   const fdrBadgeShort = (c) => c.fdr_significant
     ? '<span class="colloc-fdr">signifikan (FDR)</span>'
     : '<span class="colloc-fdr insig">tidak signifikan (FDR)</span>';
+
+  /* ---- Baris satu pasangan: kalimat utama (selalu terlihat) + <details>
+     lapis detail (expand). Menggantikan collocRow versi angka-mentah lama. ---- */
+  function collocRow(c, otherVariantRow) {
+    const sentence = mainSentence(c, otherVariantRow);
+    const isFlip = !!(c.status_changed && otherVariantRow);
+    const warn = (c.concentration_warning && !isFlip)
+      ? `<span class="colloc-warn" title="Pola terkonsentrasi di sedikit surah">⚠</span>` : '';
+
+    return `<div class="colloc-row${isFlip ? ' colloc-row-flip' : ''}">` +
+      `<p class="colloc-sentence">${sentence}${warn}</p>` +
+      `<details class="colloc-detail-toggle">` +
+        `<summary>Lihat detail statistik</summary>` +
+        detailLayer(c) +
+      `</details>` +
+      `</div>`;
+  }
 
   /* ---- Baris satu pasangan: kalimat utama (selalu terlihat) + <details>
      lapis detail (expand). Menggantikan collocRow versi angka-mentah lama. ---- */
