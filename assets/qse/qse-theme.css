@@ -407,7 +407,7 @@ html[data-theme="manuscript"] .wordgloss.active { border-radius: 3px; }
    (laporan UX pasca-verifikasi SPEC-UX-03)
    ============================================================ */
 
-.cd-row-pmig2 {
+.cd-row-pmig2:has(details[open]) {
   justify-content: flex-start;
   flex-wrap: wrap;
   gap: 0.6em;

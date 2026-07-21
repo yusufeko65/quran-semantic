@@ -392,7 +392,7 @@
       `<span class="wd-mono cd-pmig2-values">` +
       `<span class="cd-term">PMI=${esc(c.pmi)} ${glossIcon('pmi')}</span>` +
       `<span class="cd-term">G²=${esc(c.g2)} ${glossIcon('g2')}</span>` +
-      ` — arah: ${esc(c.direction)}` +
+      `<span class="cd-term cd-direction">— arah: ${esc(c.direction)}</span>` +
       `</span></div>`);
 
     if (c.p_permutation != null) {
