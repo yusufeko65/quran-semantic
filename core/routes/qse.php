@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Qse\AnalysisGenerationController;
 use App\Http\Controllers\Qse\AyahController;
 use App\Http\Controllers\Qse\HypothesisController;
 use App\Http\Controllers\Qse\PageController;
@@ -62,4 +63,9 @@ Route::prefix('qse/api')->name('qse.api.')->group(function () {
     Route::middleware('auth')->group(function () {
         Route::post('/hypotheses', [HypothesisController::class, 'store'])->name('hypotheses.store');
     });
+});
+
+Route::prefix('qse/curator')->middleware(['auth', 'qse.role:curator'])->group(function () {
+    Route::post('/generate/{hypothesis}', [AnalysisGenerationController::class, 'generate'])
+        ->name('qse.curator.generate');
 });

@@ -16,8 +16,14 @@ return [
 
     // Tier 2 — penyedia AI (titik integrasi AnalysisGenerationService::callAiApi)
     'ai' => [
-        'model'   => env('QSE_AI_MODEL', ''),
-        'api_key' => env('QSE_AI_API_KEY', ''),
+        // Model TIDAK di-hardcode sbg fakta mutlak di sini -- default ini
+        // adalah TITIK AWAL yang gampang diganti via .env tanpa ubah kode,
+        // sesuai instruksi PM "cek dokumentasi Anthropic terkini, jangan
+        // hardcode dari ingatan". Kalau ragu nama model yg benar SEKARANG,
+        // cek https://docs.claude.com sebelum deploy production.
+        'model'              => env('QSE_AI_MODEL', 'claude-sonnet-5'),
+        'anthropic_api_key'  => env('ANTHROPIC_API_KEY'),
+        'api_key'            => env('QSE_AI_API_KEY', ''),
     ],
 
     // Label wajib yang melekat pada setiap output AI (Bagian V butir 8, §18)

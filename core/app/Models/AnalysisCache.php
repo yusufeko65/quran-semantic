@@ -10,9 +10,10 @@ class AnalysisCache extends Model
 {
     protected $table = 'analysis_caches';
     public $timestamps = false;
-    protected $fillable = ['subject_type','subject_id','content','verdict','model_version',
-        'input_ayah_ids','generated_by_run_id','is_current','created_at'];
-    protected $casts = ['content' => 'array', 'input_ayah_ids' => 'array', 'is_current' => 'boolean'];
+    protected $fillable = ['subject_type','subject_id','subject_ref','content','verdict','model_version',
+        'input_ayah_ids','generated_by_run_id','is_current','promoted_at','promoted_by','created_at'];
+    protected $casts = ['content' => 'array', 'input_ayah_ids' => 'array', 'is_current' => 'boolean',
+        'promoted_at' => 'datetime'];
 
     public function run(): BelongsTo { return $this->belongsTo(AiRunLog::class, 'generated_by_run_id'); }
 }

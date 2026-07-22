@@ -46,7 +46,7 @@ class WordAnalysisService
             ],
             'layer1_phoneme' => $this->layer1($word),
             'layer2_root'    => $this->layer2($word),
-            'layer3_verses'  => $this->layer3($word, $statsLimit),
+            'layer3_verses'  => $this->layer3($word, $statsLimit), // TIDAK DISENTUH — HANDOFF-23 verifikasi poin 3
             'layer4_analysis' => $this->layer4($word),
         ];
     }
@@ -77,7 +77,6 @@ class WordAnalysisService
                 'form'    => $r->proto_semitic_form,
                 'meaning' => $r->proto_semitic_meaning,
                 'source'  => $r->protoSemiticSource?->name,
-                // Status epistemik WAJIB melekat pada data, bukan cuma UI (§2, §13)
                 'status'  => 'HIPOTESIS AKADEMIK — makna pra-Qur\'ani, '
                     . 'bukan makna ayat (Manifest §2, §5).',
             ] : null,
@@ -85,6 +84,12 @@ class WordAnalysisService
         ];
     }
 
+    /**
+     * TIDAK DIUBAH oleh HANDOFF-23 (verifikasi wajib poin 3) — tetap
+     * statistics('lemma', $word->lemma, $statsLimit), sudah benar sejak
+     * HANDOFF-16. subject_type di sini sama sekali tidak relevan; itu
+     * murni urusan layer4()/analysis_caches, bukan Layer 3/collocations.
+     */
     private function layer3(Word $word, int $statsLimit = 10): array
     {
         if (!$word->root) {
@@ -126,13 +131,23 @@ class WordAnalysisService
         ];
     }
 
+    /**
+     * PUTUSAN-09 §4 / HANDOFF-23 — diperbarui: subject_type='lemma' +
+     * subject_ref=$word->lemma (analisis pola penggunaan), BUKAN lagi
+     * subject_type='root' + subject_id=$word->root_id.
+     *
+     * 'root' (subject_id) tetap ada di skema utk analisis etimologis v2
+     * (belum aktif) — lihat tabel makna PUTUSAN-09 §4. 'word' (subject_id
+     * -> words.id) tetap ada utk kasus pengecualian/homograf spesifik,
+     * juga belum dipakai jalur ini.
+     */
     private function layer4(Word $word): array
     {
         $cache = null;
-        if ($word->root) {
+        if ($word->lemma) {
             $cache = AnalysisCache::query()
-                ->where('subject_type', 'root')
-                ->where('subject_id', $word->root_id)
+                ->where('subject_type', 'lemma')
+                ->where('subject_ref', $word->lemma)
                 ->where('is_current', true)
                 ->first();
         }
@@ -140,7 +155,7 @@ class WordAnalysisService
         if (!$cache) {
             return [
                 'status' => 'BELUM DIGENERATE',
-                'note'   => 'Analisa Sementara untuk root ini belum tersedia. '
+                'note'   => 'Analisa Sementara untuk lemma ini belum tersedia. '
                     . 'Generate hanya dilakukan admin/kurator (Tier 2, Manifest §10) — '
                     . 'permintaan pengguna tidak memicu AI.',
             ];
