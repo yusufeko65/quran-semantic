@@ -27,6 +27,10 @@ use Illuminate\Support\Facades\Route;
 // ---------------------------------------------------------------
 Route::prefix('qse')->name('qse.page.')->group(function () {
     Route::get('/',                        [PageController::class, 'home'])->name('home');
+    // Redesign quranmazid (HANDOFF-CODE-01): Beranda (landing, di atas)
+    // dipisah dari grid 114 surah, yang sekarang punya rute sendiri.
+    Route::get('/indeks-surah',            [PageController::class, 'surahIndex'])->name('surah-index');
+    Route::get('/pembukaan',               [PageController::class, 'pembukaan'])->name('pembukaan');
     Route::get('/surah/{surah}',           [PageController::class, 'surah'])->name('surah');
     Route::get('/ayah/{surah}/{number}',   [PageController::class, 'ayah'])
         ->whereNumber(['surah', 'number'])->name('ayah');
