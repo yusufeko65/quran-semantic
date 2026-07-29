@@ -93,12 +93,39 @@ class PageController extends Controller
         ]);
     }
 
-    public function surah(int $surah)
+    /**
+     * Halaman Surah — tampilan baca menerus (redesign quranmazid,
+     * HANDOFF-CODE-kesenjangan-struktur): tiap ayat dirender penuh
+     * (kata per-kata, bisa diwarnai tajwid, terjemahan inline), bukan
+     * cuma daftar navigasi. Kata TIDAK memicu AJAX 4-lapisan di sini
+     * (tidak ada #word-detail di halaman ini) — klik kata mengarah ke
+     * ayah.blade.php untuk detail penuh, sesuai perilaku mockup.
+     */
+    public function surah(int $surah, TajweedService $tajweed)
     {
         $s = Surah::findOrFail($surah);
+        $ayahs = $s->ayahs()->with('words')->orderBy('number_in_surah')->paginate(30);
+
+        // Terjemahan per ayat, satu query batch (pola sama dgn ayah(),
+        // diperluas utk sehalaman ayat sekaligus).
+        $translations = Translation::query()
+            ->whereIn('ayah_id', $ayahs->pluck('id'))
+            ->orderByRaw('lang = ? DESC', [config('qse.translation_lang', 'id')])
+            ->get()
+            ->unique('ayah_id')
+            ->keyBy('ayah_id');
+
+        foreach ($ayahs as $a) {
+            $a->translation_text = $translations[$a->id]->text ?? null;
+            $tajweedByWord = $tajweed->segmentsPerWord($a);
+            foreach ($a->words as $w) {
+                $w->tajweed_segments = $tajweedByWord[$w->id] ?? [];
+            }
+        }
+
         return view('qse.surah', [
             'surah' => $s,
-            'ayahs' => $s->ayahs()->orderBy('number_in_surah')->paginate(30),
+            'ayahs' => $ayahs,
             // Daftar ringkas 114 surah untuk sidebar switcher (redesign quranmazid,
             // HANDOFF-CODE-01) — murah (2 kolom, tanpa relasi), dipakai jg sbg cache
             // ringan lintas request kalau nanti perlu dioptimalkan.

@@ -256,6 +256,11 @@
     initThemeToggle();
     initHeaderSearch();
     initNavToggle();
+    // initTajwid() sengaja TIDAK di bawah guard #word-detail (lihat di bawah) —
+    // halaman baca menerus (surah.blade.php, redesign quranmazid) punya toggle
+    // tajwid tanpa panel AJAX 4-lapisan. Aman dipanggil di halaman mana pun:
+    // no-op kalau #tajwid-toggle/#mushaf-text tidak ada (guard di dalam fungsi).
+    initTajwid();
 
     const panel = document.getElementById('word-detail');
     if (!panel) return;
@@ -274,8 +279,6 @@
         });
       }
     });
-
-    initTajwid();
   });
 
   /* ---- §4 SPEC-UX-02: notasi ilmiah -> bentuk terbaca ---- */
