@@ -17,6 +17,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('assets/qse/qse.css') }}">
+    {{-- qse-metodologi.css ditulis sbg "TAMBAHKAN DI AKHIR qse.css" tapi
+         tidak pernah benar-benar dimuat di mana pun (bug lama, ditemukan
+         saat verifikasi Fase 1 HANDOFF-CODE-redesign-fase2) — seluruh
+         style halaman Panduan Metodologi (TOC, classif-card, verdict-legend,
+         tier-grid) tidak pernah aktif sampai sekarang. Dimuat sbg stylesheet
+         terpisah (bukan digabung ke qse.css) supaya scope perubahan kecil. --}}
+    <link rel="stylesheet" href="{{ asset('assets/qse/qse-metodologi.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/qse/qse-theme.css') }}">
 </head>
 <body>

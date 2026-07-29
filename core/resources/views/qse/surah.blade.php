@@ -92,19 +92,22 @@
             <div class="surah-reader tajwid-on mushaf-text" id="mushaf-text">
                 @foreach ($ayahs as $a)
                     <article class="surah-ayah-row">
-                        <div class="surah-ayah-head">
+                        <div class="surah-ayah-side">
                             <span class="surah-ayah-ref">{{ $a->ref }}</span>
                             <a href="{{ route('qse.page.ayah', [$surah->id, $a->number_in_surah]) }}"
-                               class="surah-ayah-detail-btn" title="Buka detail ayat/kata">→</a>
+                               class="surah-ayah-detail-btn" title="Buka detail ayat/kata"><span class="arrow-icon"></span></a>
                         </div>
-                        <div class="surah-ayah-words" dir="rtl">
-                            @foreach ($a->words as $w)
-                                <a href="{{ route('qse.page.ayah', [$surah->id, $a->number_in_surah]) }}"
-                                   class="qword">{!! qseRenderTajweedWord($w) !!}</a>
-                            @endforeach
-                        </div>
-                        <div class="surah-ayah-translation">
-                            {{ $a->translation_text ?? 'Terjemahan belum dimuat.' }}
+                        <div class="surah-ayah-content">
+                            <div class="surah-ayah-words" dir="rtl">
+                                @foreach ($a->words as $w)
+                                    <a href="{{ route('qse.page.ayah', [$surah->id, $a->number_in_surah]) }}"
+                                       class="qword">{!! qseRenderTajweedWord($w) !!}</a>
+                                @endforeach
+                            </div>
+                            <div class="surah-ayah-tr-label">Kemenag RI</div>
+                            <div class="surah-ayah-translation">
+                                {{ $a->translation_text ?? 'Terjemahan belum dimuat.' }}
+                            </div>
                         </div>
                     </article>
                 @endforeach

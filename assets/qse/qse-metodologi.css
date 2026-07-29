@@ -17,7 +17,14 @@
 }
 .method-toc a:hover, .method-toc a:focus-visible { color: var(--gold); border-bottom-color: var(--gold); }
 
-.method-section { max-width: 680px; margin: 0 auto 3rem; scroll-margin-top: 1rem; }
+/* Kartu per bagian (Fase 1, HANDOFF-CODE-redesign-fase2) — pola sama
+   dengan layerCardStyle/.pembukaan-card: background+border+radius+padding.
+   Struktur, bukan warna — unscoped, konsisten di kedua tema. */
+.method-section {
+  max-width: 680px; margin: 0 auto 1.4rem; scroll-margin-top: 1rem;
+  background: var(--paper-panel); border: 1px solid var(--rule); border-radius: 14px;
+  padding: 1.4rem 1.6rem;
+}
 .method-section h2 {
   font-family: var(--font-display); font-size: 1.25rem; color: var(--ink);
   margin-bottom: 0.7rem;
