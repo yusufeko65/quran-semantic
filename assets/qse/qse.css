@@ -213,8 +213,8 @@ h1.page-title {
   border-radius: 3px;
   transition: background 0.12s ease;
 }
-.mushaf-text .qword:hover { background: rgba(168, 130, 60, 0.18); }
-.mushaf-text .qword.active { background: rgba(168, 130, 60, 0.32); }
+.mushaf-text .qword:hover { background: color-mix(in srgb, var(--gold) 18%, transparent); }
+.mushaf-text .qword.active { background: color-mix(in srgb, var(--gold) 32%, transparent); }
 
 .classification-tag {
   display: inline-flex;
@@ -308,7 +308,7 @@ h1.page-title {
 .ps-note {
   margin-top: 0.5rem;
   font-size: 0.78rem;
-  background: rgba(139, 74, 61, 0.08);
+  background: color-mix(in srgb, var(--rose) 8%, transparent);
   border-left: 2px solid var(--rose);
   padding: 0.5rem 0.7rem;
   color: var(--ink-soft);
@@ -512,7 +512,7 @@ h1.page-title {
 
 .wd-badge.proto {
   display: inline-block; font-family: var(--font-mono); font-size: 0.66rem;
-  color: var(--rose); background: rgba(139, 74, 61, 0.14);
+  color: var(--rose); background: color-mix(in srgb, var(--rose) 14%, transparent);
   padding: 0.15rem 0.5rem; border-radius: 3px; margin-top: 0.2rem;
 }
 
@@ -581,7 +581,7 @@ h1.page-title {
 .wordgloss-section,
 .surah-card,
 .hyp-card {
-  box-shadow: 0 1px 2px rgba(31, 42, 36, 0.05), 0 3px 10px rgba(31, 42, 36, 0.07);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 3px 10px rgba(0, 0, 0, 0.10);
 }
 .mushaf, .word-detail { border-color: var(--rule-strong); }
 

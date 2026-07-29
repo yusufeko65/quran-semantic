@@ -22,10 +22,74 @@ use Illuminate\Pagination\LengthAwarePaginator;
  */
 class PageController extends Controller
 {
+    /**
+     * Beranda (landing) — redesign quranmazid (HANDOFF-CODE-01).
+     * Sebelumnya route ini langsung merender grid 114 surah; grid itu
+     * sekarang punya halaman sendiri (surahIndex()) sesuai pemisahan
+     * "Beranda" vs "Indeks Surah" di SPESIFIKASI-KONTEN-HALAMAN-untuk-Design.
+     */
     public function home()
     {
-        return view('qse.home', [
+        return view('qse.home');
+    }
+
+    /** Indeks Surah — grid 114 surah (isi lama dari home()). */
+    public function surahIndex()
+    {
+        return view('qse.surah_index', [
             'surahs' => Surah::orderBy('id')->get(),
+        ]);
+    }
+
+    /**
+     * Halaman "Pembukaan" — prinsip tafsir al-Qur'an bil-Qur'an, lewat
+     * ayat premis (16:89) + dua contoh pasangan ayat-ke-ayat nyata dari
+     * ADENDUM-Tier-Pembukaan-SampelKedua.md (disetujui PM). Caption di
+     * bawah adalah teks PM apa adanya — bukan interpretasi buatan sendiri
+     * (§19 tetap berlaku untuk peninjauan final, dicatat di view).
+     */
+    public function pembukaan()
+    {
+        $fetchAyahs = function (int $surahId, array $numbers) {
+            return Ayah::query()
+                ->where('surah_id', $surahId)
+                ->whereIn('number_in_surah', $numbers)
+                ->with('surah')
+                ->orderBy('number_in_surah')
+                ->get()
+                ->map(function (Ayah $ayah) {
+                    $translation = Translation::query()
+                        ->where('ayah_id', $ayah->id)
+                        ->orderByRaw('lang = ? DESC', [config('qse.translation_lang', 'id')])
+                        ->first();
+                    $ayah->translation_text = $translation->text ?? null;
+
+                    return $ayah;
+                });
+        };
+
+        return view('qse.pembukaan', [
+            'premise' => $fetchAyahs(16, [89])->first(),
+            'examples' => [
+                [
+                    'title'    => 'Contoh 1',
+                    'refA'     => "QS 1:6-7 (Al-Fatihah)",
+                    'ayahsA'   => $fetchAyahs(1, [6, 7]),
+                    'captionA' => '"Jalan yang lurus" diminta secara umum.',
+                    'refB'     => "QS 4:69 (An-Nisa)",
+                    'ayahsB'   => $fetchAyahs(4, [69]),
+                    'captionB' => 'Dijelaskan konkret: jalan para nabi, orang jujur, syuhada, dan orang saleh.',
+                ],
+                [
+                    'title'    => 'Contoh 2',
+                    'refA'     => "QS 2:2-5 (Al-Baqarah)",
+                    'ayahsA'   => $fetchAyahs(2, [2, 3, 4, 5]),
+                    'captionA' => 'Ciri "orang yang beruntung" disebut ringkas.',
+                    'refB'     => "QS 23:1-11 (Al-Mu'minun)",
+                    'ayahsB'   => $fetchAyahs(23, range(1, 11)),
+                    'captionB' => 'Ciri yang sama dijelaskan lebih rinci.',
+                ],
+            ],
         ]);
     }
 
@@ -35,6 +99,10 @@ class PageController extends Controller
         return view('qse.surah', [
             'surah' => $s,
             'ayahs' => $s->ayahs()->orderBy('number_in_surah')->paginate(30),
+            // Daftar ringkas 114 surah untuk sidebar switcher (redesign quranmazid,
+            // HANDOFF-CODE-01) — murah (2 kolom, tanpa relasi), dipakai jg sbg cache
+            // ringan lintas request kalau nanti perlu dioptimalkan.
+            'allSurahs' => Surah::orderBy('id')->get(['id', 'transliteration']),
         ]);
     }
 

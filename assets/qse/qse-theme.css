@@ -14,23 +14,31 @@
    A. TOKEN MODERN (default) — menimpa nilai manuskrip di qse.css
    Nama variable SAMA dengan yang sudah dipakai di seluruh komponen,
    supaya tidak perlu menulis ulang komponen manapun.
+
+   §5 REDESIGN QURANMAZID (HANDOFF-CODE-01) — amendemen in-place (K8):
+   palet gelap terinspirasi quranmazid.com, diterjemahkan dari mockup
+   Claude Design `QSE App.dc.html`. Nilai oklch persis sama dengan
+   token yang dipakai mockup (bukan tebakan/interpretasi visual sendiri).
+   Manuskrip TIDAK terpengaruh — token-nya dideklarasikan ulang penuh
+   di blok C (html[data-theme="manuscript"]) di bawah.
    ------------------------------------------------------------ */
 :root {
-  --paper:        #FAFAF9;
-  --paper-panel:  #FFFFFF;
-  --ink:          #18181B;
-  --ink-soft:     #3F3F46;
-  --ink-faint:    #A1A1AA;
-  --gold:         #4F46E5;  /* aksen muhkamat/interaksi — indigo di tema modern */
-  --rose:         #DC2626;  /* aksen mutasyabihat — merah di tema modern */
-  --rule:         #E4E4E7;
-  --rule-strong:  #D4D4D8;
+  --paper:        oklch(0.17 0.006 264);
+  --paper-panel:  oklch(0.215 0.006 264);
+  --paper-raised: oklch(0.24 0.008 264);
+  --ink:          oklch(0.94 0.004 264);
+  --ink-soft:     oklch(0.62 0.01 264);
+  --ink-faint:    oklch(0.52 0.01 264);
+  --gold:         oklch(0.72 0.1 260);   /* aksen interaksi/link — indigo-biru, TERPISAH dari muhkamat */
+  --rose:         oklch(0.65 0.18 25);   /* aksen mutasyabihat — merah-oranye, kontras di latar gelap */
+  --rule:         oklch(0.30 0.01 264);
+  --rule-strong:  oklch(0.36 0.01 264);
 
-  --verdict-sync:          #059669;
-  --verdict-partial:       #B45309;
-  --verdict-contradicted:  #DC2626;
-  --verdict-insufficient:  #71717A;
-  --verdict-beyond:        #7C3AED;
+  --verdict-sync:          oklch(0.65 0.15 145);
+  --verdict-partial:       oklch(0.72 0.15 80);
+  --verdict-contradicted:  oklch(0.62 0.19 25);
+  --verdict-insufficient:  oklch(0.55 0.01 264);
+  --verdict-beyond:        oklch(0.62 0.14 300);
 
   --font-arabic:  'Amiri', 'Traditional Arabic', serif; /* tetap sama di semua tema — identitas mushaf */
   --font-display: 'Inter', sans-serif;
@@ -602,4 +610,110 @@ html[data-theme="manuscript"] .wordgloss.active { border-radius: 3px; }
   color: var(--ink-soft);
   margin-top: 0.3rem;
   max-width: 24rem;
+}
+/* ============================================================
+   §5 — REDESIGN QURANMAZID (HANDOFF-CODE-01)
+   Struktur baru yang tidak punya hook di qse.css: header/nav gaya
+   mockup, hero+kartu Beranda, kartu Pembukaan, sidebar Surah.
+   Semua di bawah ini HANYA berlaku saat tema Modern (default) aktif —
+   Manuskrip sudah mendeklarasikan ulang token-nya sendiri di blok C
+   di atas. Kelas baru di sini (.hero-*, .entry-card, .pembukaan-*,
+   .surah-sidebar-*) TIDAK dipakai di Blade manapun untuk Manuskrip,
+   murni tambahan Modern — aman tidak membocorkan estetika quranmazid
+   ke tema itu.
+   ------------------------------------------------------------ */
+
+:root {
+  --muhkamat-accent: oklch(0.78 0.13 85); /* emas terang — kontras di latar gelap, terpisah dari --gold (biru-indigo) */
+}
+
+/* ---- Header & nav ---- */
+.site-header {
+  padding: 0.9rem 1.6rem;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+}
+.site-header .brand { font-family: var(--font-display); font-weight: 700; font-size: 1.15rem; }
+.site-header .brand small {
+  font-family: var(--font-body); text-transform: none; letter-spacing: 0;
+  font-size: 0.72rem; color: var(--ink-faint); margin-top: 0.15rem;
+}
+.site-nav { gap: 1.4rem; font-family: var(--font-body); font-size: 0.83rem; }
+.site-nav a { font-weight: 600; border-bottom: none; padding: 0.3rem 0; color: var(--ink-soft); }
+.site-nav a:hover, .site-nav a.active { color: var(--ink); border-bottom: none; }
+.search-box input[type="search"] {
+  background: var(--paper-raised); border: 1px solid var(--rule-strong);
+  border-radius: 999px; color: var(--ink);
+}
+.theme-toggle { border-radius: 999px; }
+
+/* ---- Beranda: hero + kotak pencarian + kartu pintu masuk ---- */
+.hero {
+  max-width: 760px; margin: 0 auto; padding: 3.5rem 1.5rem 1rem; text-align: center;
+}
+.hero-title { font-family: var(--font-display); font-weight: 700; font-size: 2.2rem; }
+.hero-tagline { font-size: 0.95rem; color: var(--ink-faint); margin-top: 0.6rem; }
+.hero-search { margin-top: 2rem; }
+.hero-search input[type="search"] {
+  width: 100%; background: var(--paper-panel); border: 1px solid var(--rule-strong);
+  border-radius: 999px; padding: 0.9rem 1.4rem; font-size: 0.95rem; color: var(--ink);
+  font-family: var(--font-body);
+}
+.entry-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.9rem;
+  max-width: 760px; margin: 2.2rem auto 4rem; padding: 0 1.5rem;
+}
+@media (max-width: 640px) { .entry-grid { grid-template-columns: 1fr; } }
+.entry-card {
+  display: flex; flex-direction: column; gap: 0.4rem; text-decoration: none; color: var(--ink);
+  background: var(--paper-panel); border: 1px solid var(--rule); border-radius: 14px; padding: 1.3rem 1.4rem;
+  transition: border-color 0.15s ease;
+}
+.entry-card:hover { border-color: var(--rule-strong); }
+.entry-card .title { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; }
+.entry-card .desc { font-size: 0.8rem; color: var(--ink-faint); line-height: 1.5; }
+
+/* ---- Pembukaan ---- */
+.pembukaan-card {
+  background: var(--paper-panel); border: 1px solid var(--rule); border-radius: 14px;
+  padding: 1.3rem 1.4rem; margin-bottom: 1rem; max-width: 760px; margin-left: auto; margin-right: auto;
+}
+.pembukaan-card .title { font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; color: var(--ink-soft); margin-bottom: 0.7rem; }
+.pembukaan-ayat-ref { font-size: 0.82rem; color: var(--ink-faint); margin-bottom: 0.4rem; }
+.pembukaan-ayat-ar {
+  direction: rtl; font-family: var(--font-arabic); font-size: 1.4rem; line-height: 2;
+  background: var(--paper-raised); border-radius: 8px; padding: 0.9rem 1.1rem; margin-bottom: 0.5rem;
+}
+.pembukaan-ayat-tr { font-size: 0.85rem; color: var(--ink-soft); }
+.pembukaan-caption { font-size: 0.85rem; line-height: 1.6; margin-top: 0.5rem; }
+.pembukaan-arrow { text-align: center; font-size: 1.1rem; color: var(--ink-faint); margin: 0.8rem 0; }
+.pembukaan-footnote { font-size: 0.75rem; color: var(--ink-faint); font-style: italic; max-width: 760px; margin: 0.5rem auto 3rem; padding: 0 1.5rem; }
+
+/* ---- Surah: sidebar switcher (opsional, desktop) ---- */
+.surah-layout { display: flex; align-items: flex-start; gap: 0; min-height: 0; }
+.surah-sidebar {
+  flex: none; width: 280px; border-right: 1px solid var(--rule);
+  max-height: calc(100vh - 4rem); overflow-y: auto; padding: 0 1rem 1rem 0;
+  position: sticky; top: 1rem;
+}
+.surah-sidebar input[type="search"] {
+  width: 100%; background: var(--paper-raised); border: 1px solid var(--rule-strong);
+  border-radius: 999px; padding: 0.5rem 1rem; font-size: 0.8rem; color: var(--ink);
+  font-family: var(--font-body); margin-bottom: 0.7rem;
+}
+.surah-sidebar-list { display: flex; flex-direction: column; gap: 0.3rem; }
+.surah-sidebar-item {
+  display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.6rem; border-radius: 8px;
+  text-decoration: none; color: var(--ink); font-size: 0.85rem;
+}
+.surah-sidebar-item:hover { background: var(--paper-panel); }
+.surah-sidebar-item.active { background: color-mix(in srgb, var(--gold) 16%, transparent); }
+.surah-sidebar-item .badge {
+  flex: none; width: 26px; height: 26px; border-radius: 7px; background: var(--paper-raised);
+  display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 0.68rem; color: var(--ink-faint);
+}
+.surah-main { flex: 1; min-width: 0; padding-left: 1.6rem; }
+@media (max-width: 900px) {
+  .surah-layout { flex-direction: column; }
+  .surah-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--rule); position: static; max-height: none; padding: 0 0 1rem; }
 }
