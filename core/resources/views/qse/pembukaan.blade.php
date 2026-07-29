@@ -28,6 +28,7 @@
             <div class="pembukaan-ayat-ref">{{ $ex['refA'] }}</div>
             @forelse ($ex['ayahsA'] as $a)
                 <div class="pembukaan-ayat-ar" dir="rtl">{{ $a->text_uthmani }}</div>
+                <div class="pembukaan-ayat-tr">{{ $a->translation_text ?? 'Terjemahan belum dimuat.' }}</div>
             @empty
                 <p class="strip-empty">Ayat belum bisa dimuat dari database.</p>
             @endforelse
@@ -38,6 +39,7 @@
             <div class="pembukaan-ayat-ref">{{ $ex['refB'] }}</div>
             @forelse ($ex['ayahsB'] as $b)
                 <div class="pembukaan-ayat-ar" dir="rtl">{{ $b->text_uthmani }}</div>
+                <div class="pembukaan-ayat-tr">{{ $b->translation_text ?? 'Terjemahan belum dimuat.' }}</div>
             @empty
                 <p class="strip-empty">Ayat belum bisa dimuat dari database.</p>
             @endforelse
