@@ -976,3 +976,29 @@ h1.page-title {
     flex-basis: auto;
   }
 }
+/* ============================================================
+   QSE — Surah: tampilan baca menerus
+   [TAMBAHKAN DI AKHIR qse.css — perbaikan HANDOFF-CODE-kesenjangan-struktur]
+   Struktur baru (bukan cuma daftar navigasi) — kata per-kata, tajwid,
+   terjemahan inline. Ini perubahan STRUKTUR, jadi unscoped (berlaku di
+   kedua tema, masing-masing lewat palet var() sendiri) — konsisten dgn
+   prinsip qse-theme.css: tema hanya beda bahasa visual, bukan struktur.
+   ============================================================ */
+.surah-main-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+.surah-reader { display: flex; flex-direction: column; margin: 1.2rem 0; }
+.surah-ayah-row { padding: 1.4rem 0; border-bottom: 1px solid var(--rule); }
+.surah-ayah-row:last-child { border-bottom: none; }
+.surah-ayah-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; }
+.surah-ayah-ref { font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-faint); }
+.surah-ayah-detail-btn {
+  text-decoration: none; font-size: 0.8rem; color: var(--ink-faint);
+  border: 1px solid var(--rule-strong); border-radius: 6px;
+  width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+}
+.surah-ayah-detail-btn:hover { color: var(--ink); border-color: var(--gold); }
+.surah-ayah-words {
+  display: flex; flex-wrap: wrap; gap: 0.5rem; direction: rtl;
+  font-family: var(--font-arabic); font-size: 1.7rem; line-height: 2;
+}
+.surah-ayah-words .qword { text-decoration: none; }
+.surah-ayah-translation { font-size: 0.92rem; color: var(--ink-soft); margin-top: 0.7rem; }

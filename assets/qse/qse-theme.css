@@ -717,3 +717,30 @@ html[data-theme="manuscript"] .wordgloss.active { border-radius: 3px; }
   .surah-layout { flex-direction: column; }
   .surah-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--rule); position: static; max-height: none; padding: 0 0 1rem; }
 }
+
+/* ------------------------------------------------------------
+   §6 — Perbaikan HANDOFF-CODE-kesenjangan-struktur (PM): §5 di atas
+   mereskin WARNA lewat token, tapi struktur internal 4 Lapisan di
+   #word-detail masih memakai pola "pembatas garis" lama (border-top
+   antar .wd-layer di satu panel), bukan "kartu terpisah bernomor"
+   seperti layerCardStyle di mockup (background+border+radius+margin
+   PER lapisan). Konten tiap lapisan (kalimat manusiawi, detail teknis,
+   peringatan konsentrasi, dst.) SUDAH benar dari qse.js — ini murni
+   pembungkus visualnya. Discope ke `html:not([data-theme="manuscript"])`
+   supaya Manuskrip (yang belum diberi kartu di sini) tetap jatuh ke
+   aturan lama qse.css, TIDAK ikut berubah.
+   ------------------------------------------------------------ */
+html:not([data-theme="manuscript"]) .wd-layer {
+  border-top: none;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  padding: 1.1rem 1.2rem;
+  margin-bottom: 0.9rem;
+}
+html:not([data-theme="manuscript"]) .wd-layer:first-of-type {
+  padding-top: 1.1rem;
+}
+html:not([data-theme="manuscript"]) .wd-layer:last-of-type {
+  margin-bottom: 0;
+}
