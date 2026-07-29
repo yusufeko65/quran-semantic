@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:oklch(0.17 0.006 264); }
+  * { box-sizing:border-box; }
+  a { color:oklch(0.72 0.1 260); }
+  a:hover { color:oklch(0.8 0.1 260); }
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb { background:oklch(0.32 0.01 264); border-radius:6px; }
+</style>
+</helmet>
+
+<div style="height:100vh; display:flex; flex-direction:column; background:oklch(0.17 0.006 264); font-family:Inter,sans-serif; color:oklch(0.94 0.004 264); overflow:hidden;">
+
+  <div style="flex:none; background:oklch(0.22 0.05 70); border-left:6px solid oklch(0.68 0.16 62); padding:10px 20px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+    <span style="font-weight:700; font-size:12px; letter-spacing:0.06em; text-transform:uppercase; color:oklch(0.94 0.04 70);">Hasil Analisa Sementara</span>
+    <span style="font-size:13px; color:oklch(0.82 0.03 70); line-height:1.4;">Pola linguistik komputasional, bukan tafsir/fatwa.</span>
+  </div>
+
+  <div style="flex:none; display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid oklch(0.28 0.01 264); gap:12px;">
+    <a href="#" onClick="{{ goHome }}" style="display:flex; flex-direction:column; text-decoration:none; color:inherit;">
+      <span style="font-family:'Source Serif 4',serif; font-weight:700; font-size:18px;">Quran Semantic Explorer</span>
+      <span style="font-size:11px; color:oklch(0.58 0.01 264);">Jurnal Penelitian Linguistik — Data Driven</span>
+    </a>
+    <div style="{{ desktopNavStyle }}">
+      <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="5">
+        <a href="#" onClick="{{ item.onClick }}" style="{{ item.style }}">{{ item.label }}</a>
+      </sc-for>
+    </div>
+    <button onClick="{{ onToggleNav }}" style="{{ navToggleBtnStyle }}">
+      <div style="width:16px; height:2px; background:oklch(0.7 0.01 264);"></div>
+      <div style="width:16px; height:2px; background:oklch(0.7 0.01 264);"></div>
+      <div style="width:16px; height:2px; background:oklch(0.7 0.01 264);"></div>
+    </button>
+  </div>
+
+  <sc-if value="{{ navOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:none; display:flex; flex-direction:column; border-bottom:1px solid oklch(0.28 0.01 264); padding:8px 12px;">
+      <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="5">
+        <a href="#" onClick="{{ item.onClick }}" style="padding:12px 8px; text-decoration:none; color:inherit; font-size:14px; font-weight:600; border-bottom:1px solid oklch(0.26 0.008 264);">{{ item.label }}</a>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <div onScroll="{{ onContentScroll }}" style="flex:1; min-height:0; overflow-y:auto;">
+
+    <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+      <div style="max-width:760px; margin:0 auto; padding:60px 24px;">
+        <div style="text-align:center;">
+          <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:36px;">Quran Semantic Explorer</div>
+          <div style="font-size:15px; color:oklch(0.6 0.01 264); margin-top:10px;">Jurnal Penelitian Linguistik — Data Driven</div>
+        </div>
+        <div style="margin-top:32px;">
+          <input value="{{ globalQuery }}" onChange="{{ onGlobalQueryChange }}" onKeyDown="{{ onGlobalSearchKey }}" placeholder="Cari surah, root, atau kata…" style="width:100%; background:oklch(0.22 0.008 264); border:1px solid oklch(0.32 0.01 264); border-radius:999px; padding:14px 22px; font-size:15px; color:oklch(0.94 0.004 264); font-family:Inter,sans-serif;">
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-top:36px;">
+          <sc-for list="{{ homeEntries }}" as="e" hint-placeholder-count="4">
+            <a href="#" onClick="{{ e.onClick }}" style="display:flex; flex-direction:column; gap:6px; background:oklch(0.215 0.006 264); border:1px solid oklch(0.30 0.01 264); border-radius:14px; padding:20px; text-decoration:none; color:inherit;">
+              <div style="font-family:'Source Serif 4',serif; font-weight:600; font-size:17px;">{{ e.title }}</div>
+              <div style="font-size:12px; color:oklch(0.58 0.01 264); line-height:1.5;">{{ e.desc }}</div>
+            </a>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isSearch }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:760px; margin:0 auto; padding:32px 24px;">
+        <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:22px; margin-bottom:16px;">Hasil pencarian: "{{ globalQuery }}"</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <sc-for list="{{ searchResults }}" as="r" hint-placeholder-count="3">
+            <a href="#" onClick="{{ r.onClick }}" style="display:flex; align-items:center; justify-content:space-between; background:oklch(0.215 0.006 264); border:1px solid oklch(0.30 0.01 264); border-radius:10px; padding:14px 18px; text-decoration:none; color:inherit;">
+              <div>
+                <div style="font-size:14px; font-weight:600;">{{ r.title }}</div>
+                <div style="font-size:12px; color:oklch(0.58 0.01 264); margin-top:2px;">{{ r.preview }}</div>
+              </div>
+              <div style="font-size:11px; color:oklch(0.5 0.01 264); text-transform:uppercase; letter-spacing:0.04em;">{{ r.kind }}</div>
+            </a>
+          </sc-for>
+          <sc-if value="{{ noSearchResults }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:13px; color:oklch(0.5 0.01 264); padding:20px 0;">Tidak ada hasil untuk pencarian ini.</div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isPembukaan }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:760px; margin:0 auto; padding:32px 24px 80px;">
+        <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:26px; margin-bottom:6px;">Pembukaan</div>
+        <div style="font-size:13px; color:oklch(0.58 0.01 264); margin-bottom:28px;">Prinsip tafsir al-Qur'an bil-Qur'an — Al-Qur'an menjelaskan dirinya sendiri.</div>
+
+        <div style="{{ layerCardStyle }}">
+          <div style="{{ layerTitleStyle }}">Ayat Premis</div>
+          <div style="font-size:13px; color:oklch(0.6 0.01 264); margin-bottom:8px;">QS 16:89 (An-Nahl)</div>
+          <div style="background:oklch(0.24 0.008 264); border:1px dashed oklch(0.4 0.01 264); border-radius:8px; padding:14px; font-size:13px; color:oklch(0.6 0.01 264); font-style:italic;">[teks ayat sungguhan dari DB]</div>
+          <div style="font-size:13px; margin-top:10px; line-height:1.6;">Al-Qur'an diturunkan sebagai penjelas.</div>
+        </div>
+
+        <sc-for list="{{ pembukaanExamples }}" as="ex" hint-placeholder-count="2">
+          <div style="{{ layerCardStyle }}">
+            <div style="{{ layerTitleStyle }}">{{ ex.title }}</div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div style="font-size:13px; color:oklch(0.6 0.01 264);">{{ ex.refA }}</div>
+              <div style="background:oklch(0.24 0.008 264); border:1px dashed oklch(0.4 0.01 264); border-radius:8px; padding:14px; font-size:13px; color:oklch(0.6 0.01 264); font-style:italic;">[teks ayat sungguhan dari DB]</div>
+              <div style="font-size:13px; line-height:1.6;">{{ ex.captionA }}</div>
+            </div>
+            <div style="text-align:center; font-size:18px; color:oklch(0.5 0.01 264); margin:14px 0;">&darr;</div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div style="font-size:13px; color:oklch(0.6 0.01 264);">{{ ex.refB }}</div>
+              <div style="background:oklch(0.24 0.008 264); border:1px dashed oklch(0.4 0.01 264); border-radius:8px; padding:14px; font-size:13px; color:oklch(0.6 0.01 264); font-style:italic;">[teks ayat sungguhan dari DB]</div>
+              <div style="font-size:13px; line-height:1.6;">{{ ex.captionB }}</div>
+            </div>
+          </div>
+        </sc-for>
+
+        <div style="font-size:11px; color:oklch(0.5 0.01 264); font-style:italic; margin-top:8px;">Framing teks penjelas di atas menunggu tinjauan kurator (§19) sebelum publikasi final.</div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isSurahIndex }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:1320px; margin:0 auto; padding:{{ pagePad }}">
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap; margin-bottom:24px;">
+          <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:{{ titleSize }};">Indeks Surah</div>
+          <input value="{{ indexQuery }}" onChange="{{ onIndexQueryChange }}" placeholder="Cari surah…" style="min-width:220px; background:oklch(0.24 0.008 264); border:1px solid oklch(0.32 0.01 264); border-radius:999px; padding:11px 20px; font-size:14px; color:oklch(0.94 0.004 264); font-family:Inter,sans-serif;">
+        </div>
+        <div style="{{ gridStyle }}">
+          <sc-for list="{{ filteredSurah }}" as="s" hint-placeholder-count="12">
+            <a href="#" onClick="{{ s.onClick }}" style="display:flex; align-items:center; gap:16px; background:oklch(0.215 0.006 264); border:1px solid oklch(0.30 0.01 264); border-radius:14px; padding:18px 20px; text-decoration:none; color:inherit;">
+              <div style="flex:none; width:40px; height:40px; border-radius:10px; background:oklch(0.27 0.01 264); display:flex; align-items:center; justify-content:center; font-family:'Source Serif 4',serif; font-weight:600; font-size:15px; color:oklch(0.72 0.01 264);">{{ s.number }}</div>
+              <div style="flex:1; min-width:0;">
+                <div style="font-family:'Source Serif 4',serif; font-weight:600; font-size:16px;">{{ s.latin }}</div>
+                <div style="font-size:12px; color:oklch(0.6 0.01 264); margin-top:2px;">{{ s.translation }} • {{ s.ayahCount }} ayat • {{ s.place }}</div>
+              </div>
+              <div style="{{ cardArabicStyle }}">{{ s.arabic }}</div>
+            </a>
+          </sc-for>
+        </div>
+        <sc-if value="{{ surahHasMore }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; justify-content:center; padding:24px 0; font-size:12px; color:oklch(0.5 0.01 264);">Memuat surah berikutnya…</div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isSurah }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex; height:100%; min-height:0;">
+        <div onClick="{{ onCloseSidebarBackdrop }}" style="{{ backdropStyle }}"></div>
+        <div style="{{ sidebarStyle }}">
+          <div style="padding:16px 16px 8px; font-size:12px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:oklch(0.5 0.01 264);">Daftar Surah</div>
+          <div style="padding:0 16px 12px;">
+            <input value="{{ sidebarQuery }}" onChange="{{ onSidebarQueryChange }}" placeholder="Cari surah…" style="width:100%; background:oklch(0.24 0.008 264); border:1px solid oklch(0.32 0.01 264); border-radius:999px; padding:10px 18px; font-size:13px; color:oklch(0.94 0.004 264); font-family:Inter,sans-serif;">
+          </div>
+          <div onScroll="{{ onSidebarScroll }}" style="flex:1; overflow-y:auto; padding:0 12px 16px; display:flex; flex-direction:column; gap:8px;">
+            <sc-for list="{{ sidebarSurah }}" as="s" hint-placeholder-count="10">
+              <a href="#" onClick="{{ s.onSelect }}" style="{{ s.rowStyle }}">
+                <div style="{{ s.badgeStyle }}">{{ s.number }}</div>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-family:'Source Serif 4',serif; font-weight:600; font-size:14px;">{{ s.latin }}</div>
+                  <div style="font-size:12px; color:oklch(0.58 0.01 264);">{{ s.translation }}</div>
+                </div>
+              </a>
+            </sc-for>
+            <sc-if value="{{ sidebarHasMore }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; justify-content:center; padding:12px 0; font-size:11px; color:oklch(0.5 0.01 264);">Memuat lebih…</div>
+            </sc-if>
+          </div>
+        </div>
+
+        <div onScroll="{{ onMainScroll }}" style="flex:1; overflow-y:auto; min-height:0;">
+          <div style="max-width:900px; margin:0 auto; padding:32px 28px 80px;">
+            <div style="{{ mobileSurahHeaderStyle }}">
+              <button onClick="{{ onOpenSidebar }}" style="flex:none; width:36px; height:36px; border-radius:8px; border:1px solid oklch(0.34 0.01 264); background:oklch(0.24 0.008 264); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer;">
+                <div style="width:16px; height:2px; background:oklch(0.7 0.01 264);"></div>
+                <div style="width:16px; height:2px; background:oklch(0.7 0.01 264);"></div>
+                <div style="width:16px; height:2px; background:oklch(0.7 0.01 264);"></div>
+              </button>
+              <div style="font-family:'Source Serif 4',serif; font-weight:600; font-size:15px;">Daftar Surah</div>
+            </div>
+
+            <div style="position:sticky; top:0; z-index:5; background:oklch(0.17 0.006 264); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:16px 0; margin-bottom:16px; border-bottom:1px solid oklch(0.26 0.008 264);">
+              <div>
+                <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:26px;">Surah {{ currentSurah.latin }}</div>
+                <div style="font-size:13px; color:oklch(0.58 0.01 264); margin-top:6px;">{{ currentSurah.ayahCount }} Ayat • {{ currentSurah.place }}</div>
+              </div>
+              <button onClick="{{ onToggleTajwid }}" style="{{ tajwidToggleStyle }}">
+                <span style="{{ tajwidToggleDotStyle }}"></span>
+                Tajwid {{ tajwidToggleState }}
+              </button>
+            </div>
+
+            <sc-if value="{{ isPlaceholderSurah }}" hint-placeholder-val="{{ false }}">
+              <div style="text-align:center; padding:40px 0; font-size:13px; color:oklch(0.5 0.01 264);">Ayat surah ini belum dimuat di mockup — pilih Al Fatihah untuk contoh lengkap.</div>
+            </sc-if>
+            <sc-for list="{{ visibleAyahs }}" as="ayah" hint-placeholder-count="4">
+              <div style="display:grid; grid-template-columns:44px 1fr; gap:20px; padding:26px 0; border-bottom:1px solid oklch(0.26 0.008 264);">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+                  <div style="font-family:'Source Serif 4',serif; font-weight:600; font-size:14px; color:oklch(0.64 0.12 165);">{{ ayah.ref }}</div>
+                  <a href="#" onClick="{{ ayah.onOpenDetail }}" title="Buka detail ayat" style="width:22px; height:22px; border-radius:6px; border:1px solid oklch(0.36 0.01 264); display:flex; align-items:center; justify-content:center; text-decoration:none;">
+                    <div style="width:8px; height:8px; border-top:2px solid oklch(0.62 0.01 264); border-right:2px solid oklch(0.62 0.01 264); transform:rotate(45deg) translate(-1px,1px);"></div>
+                  </a>
+                </div>
+                <div>
+                  <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-end; direction:rtl; font-family:'Amiri',serif; font-size:26px; line-height:1.8;">
+                    <sc-for list="{{ ayah.wordsRendered }}" as="w" hint-placeholder-count="3">
+                      <span onClick="{{ w.onClick }}" style="{{ w.style }}">{{ w.text }}</span>
+                    </sc-for>
+                  </div>
+                  <div style="font-size:11px; font-weight:700; letter-spacing:0.06em; color:oklch(0.5 0.01 264); text-transform:uppercase; margin-top:10px;">Kemenag RI</div>
+                  <div style="font-size:16px; line-height:1.6; margin-top:8px;">{{ ayah.translation }}</div>
+                  <sc-if value="{{ ayah.showAyahLegend }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex; flex-wrap:wrap; gap:8px 14px; margin-top:12px; padding:10px 14px; background:oklch(0.215 0.006 264); border:1px solid oklch(0.28 0.01 264); border-radius:8px;">
+                      <sc-for list="{{ ayah.ayahLegend }}" as="tl" hint-placeholder-count="1">
+                        <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:oklch(0.72 0.01 264);">
+                          <div style="{{ tl.dotStyle }}"></div>
+                          {{ tl.label }} <span style="color:oklch(0.5 0.01 264);">— {{ tl.dur }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ ayahHasMore }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; justify-content:center; padding:24px 0; font-size:12px; color:oklch(0.5 0.01 264);">Memuat ayat berikutnya…</div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isAyat }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:820px; margin:0 auto; padding:32px 24px 80px;">
+        <a href="#" onClick="{{ onBackToSurah }}" style="font-size:13px; text-decoration:none;">&larr; Kembali ke Surah {{ currentSurah.latin }}</a>
+
+        <div style="text-align:center; font-size:12px; color:oklch(0.55 0.01 264); margin-top:20px;">QS {{ ayatRefLabel }} — klik kata mana pun untuk memuat Lapisan 1–4 di bawah</div>
+        <div style="display:flex; flex-wrap:wrap; gap:12px; justify-content:center; direction:rtl; font-family:'Amiri',serif; font-size:30px; margin:10px 0 4px;">
+          <sc-for list="{{ ayatWordsRow }}" as="w" hint-placeholder-count="2">
+            <span onClick="{{ w.onClick }}" style="{{ w.style }}">{{ w.text }}</span>
+          </sc-for>
+        </div>
+        <sc-if value="{{ ayatWordsRowIsPlaceholder }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center; font-size:11px; color:oklch(0.5 0.01 264); font-style:italic; margin-bottom:8px;">Ayat lengkap {{ wordDetail.ref }} belum dimuat dari DB di mockup — hanya kata ini yang tersedia untuk didemokan.</div>
+        </sc-if>
+
+        <sc-if value="{{ isWordStub }}" hint-placeholder-val="{{ false }}">
+          <div style="{{ layerCardStyle }}; margin-top:24px;">
+            <div style="font-size:13px; color:oklch(0.58 0.01 264); line-height:1.6;">Lapisan 1–4 untuk "{{ selectedWordText }}" belum dimuat di mockup — hanya "الرَّحِيمِ" (QS 1:3) dan "عَزِيزٌ" (QS 9:128) yang punya data contoh lengkap saat ini.</div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isWordStubOff }}" hint-placeholder-val="{{ true }}">
+        <div style="text-align:center; font-size:13px; color:oklch(0.58 0.01 264); margin:16px 0 32px;">{{ wordDetail.ref }} • {{ wordDetail.lemma }} • {{ wordDetail.pos }}</div>
+
+        <div style="{{ layerCardStyle }}">
+          <div style="{{ layerTitleStyle }}">Lapisan 1 — Fonem</div>
+          <div style="font-size:14px; line-height:1.7;">{{ wordDetail.phoneme }}</div>
+          <div style="{{ disclaimerStyle }}">Karakter bunyi adalah observasi fonetik. BUKAN makna kata.</div>
+        </div>
+
+        <div style="{{ layerCardStyle }}">
+          <div style="{{ layerTitleStyle }}">Lapisan 2 — Root</div>
+          <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;">
+            <span style="font-family:'Amiri',serif; font-size:22px;">{{ wordDetail.root }}</span>
+            <span style="font-size:13px; color:oklch(0.6 0.01 264);">({{ wordDetail.rootTranslit }}) • {{ wordDetail.rootOccurrences }} kemunculan akar</span>
+          </div>
+          <div style="font-size:13px; color:oklch(0.62 0.01 264); margin-top:8px;">Proto-Semitik (hipotesis): {{ wordDetail.protoSemitic }}</div>
+          <div style="{{ disclaimerStyle }}">Kata-kata ini berbagi root secara morfologis. Berbagi root TIDAK berarti berbagi makna.</div>
+        </div>
+
+        <div style="{{ layerCardStyle }}">
+          <div style="{{ layerTitleStyle }}">Lapisan 3 — Statistik</div>
+          <div style="font-size:13px; color:oklch(0.62 0.01 264); margin-bottom:12px;">Kemunculan se-akar (retrieval faktual): {{ wordDetail.rootOccurrences }} ayat. {{ wordDetail.dispersionText }}</div>
+          <sc-if value="{{ wordDetail.profileNote }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:11px; color:oklch(0.72 0.15 80); margin-bottom:8px;">{{ wordDetail.profileNote }}</div>
+          </sc-if>
+          <div style="font-size:11px; color:oklch(0.5 0.01 264); margin-bottom:16px;">DP/D belum dikoreksi sparsity untuk populasi kecil.</div>
+
+          <div style="display:flex; gap:8px; margin-bottom:16px;">
+            <sc-for list="{{ variantTabs }}" as="v" hint-placeholder-count="2">
+              <button onClick="{{ v.onClick }}" style="{{ v.style }}">{{ v.label }}</button>
+            </sc-for>
+          </div>
+
+          <sc-for list="{{ collocations }}" as="c" hint-placeholder-count="2">
+            <div onClick="{{ c.onClick }}" style="{{ c.rowStyle }}">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                <div style="font-family:'Amiri',serif; font-size:18px;">{{ c.arabic }}</div>
+                <div style="{{ c.directionStyle }}">{{ c.directionLabel }}</div>
+              </div>
+              <div style="font-size:13px; margin-top:8px; line-height:1.6;">{{ c.humanSentence }}</div>
+              <div style="font-size:11px; color:oklch(0.5 0.01 264); margin-top:8px; font-family:monospace;">n={{ c.n }} · G²={{ c.g2 }} · PMI={{ c.pmi }} · FDR={{ c.fdr }} · p{{ c.pLabel }}</div>
+              <sc-if value="{{ c.concentrationWarning }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:8px; font-size:11px; color:oklch(0.72 0.15 80); font-weight:600;">⚠ Konsentrasi tinggi pada satu surah ({{ c.topSurahSharePct }}) — pola bisa bersifat lokal, bukan pola kitab.</div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="{{ layerCardStyle }}">
+          <div style="{{ layerTitleStyle }}">Lapisan 4 — Analisis AI</div>
+          <div style="font-size:13px; color:oklch(0.58 0.01 264); line-height:1.6;">{{ wordDetail.layer4Note }}</div>
+        </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isRootIndex }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:900px; margin:0 auto; padding:32px 24px 80px;">
+        <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:24px; margin-bottom:20px;">Browser Root</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <sc-for list="{{ roots }}" as="r" hint-placeholder-count="4">
+            <a href="#" onClick="{{ r.onClick }}" style="display:flex; align-items:center; justify-content:space-between; background:oklch(0.215 0.006 264); border:1px solid oklch(0.30 0.01 264); border-radius:12px; padding:16px 20px; text-decoration:none; color:inherit;">
+              <div style="font-family:'Amiri',serif; font-size:22px;">{{ r.arabic }}</div>
+              <div style="font-size:13px; color:oklch(0.6 0.01 264);">{{ r.lemmaCount }} lemma • {{ r.occurrenceCount }} kemunculan</div>
+            </a>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isRootDetail }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:820px; margin:0 auto; padding:32px 24px 80px;">
+        <a href="#" onClick="{{ onBackToRootIndex }}" style="font-size:13px; text-decoration:none;">&larr; Kembali ke Browser Root</a>
+        <div style="text-align:center; font-family:'Amiri',serif; font-size:32px; margin:20px 0 6px;">{{ selectedRoot.arabic }}</div>
+        <div style="text-align:center; font-size:13px; color:oklch(0.58 0.01 264); margin-bottom:24px;">{{ selectedRoot.lemmaCount }} lemma turunan • {{ selectedRoot.occurrenceCount }} kemunculan total</div>
+        <div style="{{ disclaimerStyle }}; margin-bottom:20px;">Kata-kata ini berbagi root secara morfologis. Berbagi root TIDAK berarti berbagi makna.</div>
+        <div style="font-size:12px; color:oklch(0.5 0.01 264); margin-bottom:16px;">Statistik per-root belum ditampilkan — menunggu spesifikasi metodologi (PUTUSAN-05 §2b).</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <sc-for list="{{ selectedRoot.retrieval }}" as="occ" hint-placeholder-count="4">
+            <div style="display:flex; align-items:center; justify-content:space-between; background:oklch(0.215 0.006 264); border:1px solid oklch(0.28 0.01 264); border-radius:10px; padding:12px 16px;">
+              <div style="font-family:'Amiri',serif; font-size:17px;">{{ occ.arabic }}</div>
+              <div style="font-size:12px; color:oklch(0.58 0.01 264);">{{ occ.ref }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isMethodology }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:760px; margin:0 auto; padding:32px 24px 80px;">
+        <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:24px; margin-bottom:24px;">Panduan Metodologi</div>
+
+        <div style="{{ layerCardStyle }}">
+          <div style="{{ layerTitleStyle }}">Hirarki Data — Tier 0/1/2</div>
+          <div style="font-size:14px; line-height:1.7;">Teks mushaf &amp; terjemahan resmi (Kemenag RI) adalah data sumber — tidak bernomor tier. Tier 0: statistik deterministik (retrieval, kolokasi, dispersi) — otomatis, dapat direproduksi. Tier 1: analisis AI tersimpan (cached) — sudah digenerate, boleh dibaca siapa saja. Tier 2: analisis AI on-demand — memicu generate baru, hanya admin/kurator.</div>
+        </div>
+
+        <div style="{{ layerCardStyle }}">
+          <div style="{{ layerTitleStyle }}">Muhkamat &amp; Mutasyabihat</div>
+          <div style="font-size:14px; line-height:1.7;">Sebagian ayat maknanya jelas (muhkamat), sebagian memerlukan penafsiran lebih hati-hati (mutasyabihat) — rujukan: Ali 'Imran ayat 7.</div>
+        </div>
+
+        <div style="{{ layerCardStyle }}">
+          <div style="{{ layerTitleStyle }}">Lima Status Verdict</div>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <sc-for list="{{ verdictLegend }}" as="v" hint-placeholder-count="5">
+              <div style="display:flex; align-items:baseline; gap:10px;">
+                <div style="{{ v.dotStyle }}"></div>
+                <div style="font-size:13px;"><strong>{{ v.label }}</strong> — {{ v.desc }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="{{ layerCardStyle }}">
+          <div style="{{ layerTitleStyle }}">Grounding Anti-Halusinasi</div>
+          <div style="font-size:14px; line-height:1.7;">Setiap klaim di Layer 3 harus tertelusur ke angka retrieval faktual. Layer 4 (AI) tidak pernah dipublikasikan otomatis — menunggu tinjauan kurator.</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isHypothesisIndex }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:820px; margin:0 auto; padding:32px 24px 80px;">
+        <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:24px; margin-bottom:20px;">Jurnal Hipotesis</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <sc-for list="{{ hypotheses }}" as="h" hint-placeholder-count="3">
+            <a href="#" onClick="{{ h.onClick }}" style="display:block; background:oklch(0.215 0.006 264); border:1px solid oklch(0.30 0.01 264); border-radius:12px; padding:16px 20px; text-decoration:none; color:inherit;">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                <div style="font-size:14px; font-weight:600;">{{ h.statement }}</div>
+                <div style="{{ h.verdictStyle }}">{{ h.verdictLabel }}</div>
+              </div>
+              <div style="font-size:12px; color:oklch(0.55 0.01 264); margin-top:6px;">{{ h.date }} • {{ h.summary }}</div>
+            </a>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isHypothesisDetail }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:820px; margin:0 auto; padding:32px 24px 80px;">
+        <a href="#" onClick="{{ onBackToHypotheses }}" style="font-size:13px; text-decoration:none;">&larr; Kembali ke Jurnal Hipotesis</a>
+        <div style="margin-top:20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:20px;">{{ selectedHypothesis.statement }}</div>
+          <div style="{{ selectedHypothesis.verdictStyle }}">{{ selectedHypothesis.verdictLabel }}</div>
+        </div>
+        <div style="font-size:13px; color:oklch(0.6 0.01 264); margin-top:10px; line-height:1.6;">{{ selectedHypothesis.operationalDef }}</div>
+
+        <div style="{{ layerTitleStyle }}; margin-top:28px;">Histori Verdict</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <sc-for list="{{ selectedHypothesis.history }}" as="hv" hint-placeholder-count="2">
+            <div style="display:flex; align-items:center; justify-content:space-between; background:oklch(0.215 0.006 264); border:1px solid oklch(0.28 0.01 264); border-radius:10px; padding:12px 16px;">
+              <div style="{{ hv.verdictStyle }}">{{ hv.verdictLabel }}</div>
+              <div style="font-size:12px; color:oklch(0.55 0.01 264);">{{ hv.date }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="{{ layerTitleStyle }}; margin-top:28px;">Ayat Uji</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <sc-for list="{{ selectedHypothesis.testAyat }}" as="ta" hint-placeholder-count="2">
+            <div style="display:flex; align-items:center; justify-content:space-between; background:oklch(0.215 0.006 264); border:1px solid oklch(0.28 0.01 264); border-radius:10px; padding:12px 16px;">
+              <div style="font-size:13px;">{{ ta.ref }}</div>
+              <div style="font-size:11px; color:oklch(0.55 0.01 264); text-transform:uppercase; letter-spacing:0.03em;">{{ ta.role }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const SURAHS = [
+  { number:1, latin:"Al Fatihah", translation:"Pembukaan", arabic:"الفاتحة", place:"Makkiyah", ayahCount:7 },
+  { number:2, latin:"Al Baqarah", translation:"Sapi Betina", arabic:"البقرة", place:"Madaniyah", ayahCount:286 },
+  { number:3, latin:"Ali 'Imran", translation:"Keluarga Imran", arabic:"آل عمران", place:"Madaniyah", ayahCount:200 },
+  { number:4, latin:"An Nisa", translation:"Wanita", arabic:"النساء", place:"Madaniyah", ayahCount:176 },
+  { number:5, latin:"Al Ma'idah", translation:"Hidangan", arabic:"المائدة", place:"Madaniyah", ayahCount:120 },
+  { number:6, latin:"Al An'am", translation:"Hewan Ternak", arabic:"الأنعام", place:"Makkiyah", ayahCount:165 },
+  { number:7, latin:"Al A'raf", translation:"Tempat Tertinggi", arabic:"الأعراف", place:"Makkiyah", ayahCount:206 },
+  { number:8, latin:"Al Anfal", translation:"Rampasan Perang", arabic:"الأنفال", place:"Madaniyah", ayahCount:75 },
+  { number:9, latin:"At Taubah", translation:"Pengampunan", arabic:"التوبة", place:"Madaniyah", ayahCount:129 },
+  { number:10, latin:"Yunus", translation:"Nabi Yunus", arabic:"يونس", place:"Makkiyah", ayahCount:109 },
+  { number:11, latin:"Hud", translation:"Nabi Hud", arabic:"هود", place:"Makkiyah", ayahCount:123 },
+  { number:12, latin:"Yusuf", translation:"Nabi Yusuf", arabic:"يوسف", place:"Makkiyah", ayahCount:111 },
+  { number:13, latin:"Ar Ra'd", translation:"Guruh", arabic:"الرعد", place:"Madaniyah", ayahCount:43 },
+  { number:14, latin:"Ibrahim", translation:"Nabi Ibrahim", arabic:"إبراهيم", place:"Makkiyah", ayahCount:52 },
+  { number:15, latin:"Al Hijr", translation:"Daerah Berbatu", arabic:"الحجر", place:"Makkiyah", ayahCount:99 },
+  { number:16, latin:"An Nahl", translation:"Lebah", arabic:"النحل", place:"Makkiyah", ayahCount:128 },
+  { number:17, latin:"Al Isra", translation:"Perjalanan Malam", arabic:"الإسراء", place:"Makkiyah", ayahCount:111 },
+  { number:18, latin:"Al Kahf", translation:"Gua", arabic:"الكهف", place:"Makkiyah", ayahCount:110 },
+  { number:19, latin:"Maryam", translation:"Maryam", arabic:"مريم", place:"Makkiyah", ayahCount:98 },
+  { number:20, latin:"Ta Ha", translation:"Ta Ha", arabic:"طه", place:"Makkiyah", ayahCount:135 },
+];
+
+const TAJWID_RULE_LIST = [
+  ["hamzat_wasl","Hamzat Wasl","tidak dibaca saat disambung"], ["lam_syamsiyyah","Lam Syamsiyyah","melebur ke huruf berikutnya"],
+  ["silent","Silent","tidak dibunyikan"], ["ghunnah","Ghunnah","dengung 2 ketukan"],
+  ["idgham_ghunnah","Idgham Bighunnah","melebur, dengung 2 ketukan"], ["idgham_bila_ghunnah","Idgham Bila Ghunnah","melebur, tanpa dengung"],
+  ["idgham_syafawi","Idgham Syafawi","melebur, dengung 2 ketukan"], ["idgham_mutajanisain","Idgham Mutajanisain","melebur, makhraj sama"],
+  ["idgham_mutaqaribain","Idgham Mutaqaribain","melebur, makhraj berdekatan"], ["ikhfa","Ikhfa","samar, dengung 2 ketukan"],
+  ["ikhfa_syafawi","Ikhfa Syafawi","samar pada mim, dengung 2 ketukan"], ["iqlab","Iqlab","berubah ke bunyi mim, dengung 2 ketukan"],
+  ["qalqalah","Qalqalah","pantulan bunyi"], ["madd_2","Madd 2 Harakat","panjang 2 ketukan"],
+  ["madd_2_4_6","Madd 2/4/6 Harakat","panjang 2, 4, atau 6 ketukan"], ["madd_6","Madd 6 Harakat","panjang 6 ketukan"],
+  ["madd_munfasil","Madd Munfasil","panjang 4-5 ketukan"], ["madd_muttasil","Madd Muttasil","panjang 4-5 ketukan"],
+];
+const TAJWID_RULES = {};
+TAJWID_RULE_LIST.forEach(([key,label,dur], i) => {
+  TAJWID_RULES[key] = { label, dur, color: `oklch(0.72 0.14 ${((i*137.508)%360).toFixed(1)})` };
+});
+
+const FATIHAH_AYAHS = [
+  { ref:"1:1", translation:"Dengan nama Allah Yang Maha Pengasih, Maha Penyayang.",
+    words:[["بِسْمِ",null],["اللَّهِ",null],["الرَّحْمَٰنِ","madd_2"],["الرَّحِيمِ","madd_2"]] },
+  { ref:"1:2", translation:"Segala puji bagi Allah, Tuhan seluruh alam,",
+    words:[["الْحَمْدُ",null],["لِلَّهِ",null],["رَبِّ",null],["الْعَالَمِينَ","madd_2_4_6"]] },
+  { ref:"1:3", translation:"Yang Maha Pengasih, Maha Penyayang,",
+    words:[["الرَّحْمَٰنِ","madd_2"],["الرَّحِيمِ","madd_2"]] },
+  { ref:"1:4", translation:"Yang Menguasai hari Pembalasan.",
+    words:[["مَالِكِ",null],["يَوْمِ",null],["الدِّينِ","lam_syamsiyyah"]] },
+  { ref:"1:5", translation:"Hanya kepada Engkaulah kami menyembah dan hanya kepada Engkaulah kami memohon pertolongan.",
+    words:[["إِيَّاكَ",null],["نَعْبُدُ",null],["وَإِيَّاكَ",null],["نَسْتَعِينُ","madd_2"]] },
+  { ref:"1:6", translation:"Tunjukilah kami jalan yang lurus,",
+    words:[["اهْدِنَا","hamzat_wasl"],["الصِّرَاطَ","lam_syamsiyyah"],["الْمُسْتَقِيمَ",null]] },
+  { ref:"1:7", translation:"(yaitu) jalan orang-orang yang telah Engkau beri nikmat kepadanya; bukan (jalan) mereka yang dimurkai, dan bukan (pula jalan) mereka yang sesat.",
+    words:[["صِرَاطَ",null],["الَّذِينَ","lam_syamsiyyah"],["أَنْعَمْتَ",null],["عَلَيْهِمْ",null],["غَيْرِ",null],["الْمَغْضُوبِ",null],["عَلَيْهِمْ",null],["وَلَا",null],["الضَّالِّينَ","lam_syamsiyyah"]] },
+];
+
+
+
+const WORD_DETAILS = {
+  rahiim: {
+    id:"rahiim", ayahRef:"1:3", arabic:"الرَّحِيمِ", ref:"QS 1:3", lemma:"رَحِيم", pos:"N (Adjektiva, sifat Allah)",
+    phoneme:"ر (ra) — getar, ح (ha) — desis tenggorokan, ي (ya) — semivokal, م (mim) — nasal bilabial.",
+    root:"ر ح م", rootTranslit:"R-H-M", rootOccurrences:"116 (raw) / 53 (formula_reduced)",
+    protoSemitic:"*rḥm — dikaitkan dengan makna \"kasih/rahim\" di rumpun bahasa Semitik (hipotesis akademik, bukan makna ayat).",
+    dispersionText:"D=0,80, DP=0,42, konsentrasi tertinggi pada satu surah (9%, tanpa peringatan konsentrasi).",
+    layer4Note:"Analisa Sementara untuk root ini belum tersedia. Generate hanya dilakukan admin/kurator (Tier 2 — AI On-Demand, Manifest §10) — permintaan pengguna tidak memicu AI.",
+    collocations: [
+      { key:"ghafur", arabic:"رَحِيم – غَفُور", humanSentence:"Rahiim dan Ghafur cenderung muncul berdampingan lebih sering dari yang diharapkan acak.",
+        raw:{ n:72, g2:"538.19", pmi:"5.41", fdr:"true", pLabel:"<0,001", direction:"association", topSurahShare:0.089 },
+        formula_reduced:{ n:21, g2:"153.97", pmi:"—", fdr:"true", pLabel:"<0,001", direction:"association", topSurahShare:0.089 } },
+      { key:"aziz", arabic:"رَحِيم – عَزِيز", linkWordId:"aziz", humanSentence:"Rahiim dan 'Aziz menunjukkan asosiasi pada varian raw, namun status ini BERUBAH setelah deduplikasi formula — klik untuk lihat dari sisi 'Aziz.",
+        raw:{ n:14, g2:"34.82", pmi:"—", fdr:"true", pLabel:"<0,05", direction:"association", topSurahShare:0.643 },
+        formula_reduced:{ n:2, g2:"3.09", pmi:"—", fdr:"false", pLabel:">0,05", direction:"association", topSurahShare:0 } },
+      { key:"hakim", arabic:"رَحِيم – حَكِيم", humanSentence:"Rahiim dan Hakiim cenderung saling menghindar — jarang muncul berdampingan.",
+        raw:{ n:0, g2:"3.68", pmi:"—", fdr:"false", pLabel:">0,05", direction:"avoidance", topSurahShare:0 },
+        formula_reduced:{ n:0, g2:"3.68", pmi:"—", fdr:"false", pLabel:">0,05", direction:"avoidance", topSurahShare:0 } },
+      { key:"alim", arabic:"رَحِيم – عَلِيم", humanSentence:"Rahiim dan 'Aliim menunjukkan pola saling menghindar, tidak signifikan secara statistik.",
+        raw:{ n:0, g2:"6.22", pmi:"—", fdr:"false", pLabel:">0,05", direction:"avoidance", topSurahShare:0 },
+        formula_reduced:{ n:0, g2:"6.22", pmi:"—", fdr:"false", pLabel:">0,05", direction:"avoidance", topSurahShare:0 } },
+    ],
+  },
+  aziz: {
+    id:"aziz", ayahRef:"9:128", arabic:"عَزِيزٌ", ref:"QS 9:128", lemma:"عَزِيز", pos:"N (Adjektiva)",
+    phoneme:"ع (ain) — desis faring, ز (zay) — desis bersuara, ي (ya) — semivokal, ز (zay) — desis bersuara.",
+    root:"ع ز ز", rootTranslit:"ʿ-Z-Z", rootOccurrences:"101 (raw) / 50 (formula_reduced)",
+    protoSemitic:"*ʿzz — dikaitkan dengan makna \"kuat/mulia\" di rumpun bahasa Semitik (hipotesis akademik, bukan makna ayat).",
+    profileNote:"profile_count tetap 12 profil di kedua varian (raw & formula_reduced) — bukan bug, temuan nyata.",
+    dispersionText:"Dispersi belum diverifikasi presisi — menunggu data sungguhan dari database, tidak ditampilkan sebagai angka pasti.",
+    layer4Note:"Analisa Sementara untuk root ini belum tersedia. Generate hanya dilakukan admin/kurator (Tier 2 — AI On-Demand, Manifest §10) — permintaan pengguna tidak memicu AI.",
+    collocations: [
+      { key:"rahiim", arabic:"عَزِيز – رَحِيم", linkWordId:"rahiim", humanSentence:"'Aziz dan Rahiim menunjukkan asosiasi pada varian raw, namun TIDAK lagi signifikan setelah deduplikasi formula — klik untuk lihat dari sisi Rahiim.",
+        raw:{ n:14, g2:"34.82", pmi:"—", fdr:"true", pLabel:"<0,05", direction:"association", topSurahShare:0.643 },
+        formula_reduced:{ n:2, g2:"3.09", pmi:"—", fdr:"false", pLabel:">0,05", direction:"association", topSurahShare:0 } },
+    ],
+  },
+};
+const WORD_ID_ALIASES = { "1:3-1":"rahiim" };
+
+const VERDICT_META = {
+  SYNC: { label:"SYNC", color:"oklch(0.65 0.15 145)", desc:"konsisten dengan seluruh ayat yang diuji sejauh ini (bukan \"terbukti benar selamanya\")" },
+  PARTIAL: { label:"PARTIAL", color:"oklch(0.72 0.15 80)", desc:"sebagian klaim didukung, sebagian butuh catatan/tidak cukup" },
+  CONTRADICTED: { label:"CONTRADICTED", color:"oklch(0.62 0.19 25)", desc:"ada ayat yang secara eksplisit menyangkal (tetap tercatat permanen)" },
+  INSUFFICIENT: { label:"INSUFFICIENT", color:"oklch(0.55 0.01 264)", desc:"belum cukup bukti untuk menyimpulkan arah mana pun" },
+  BEYOND_SCOPE: { label:"BEYOND_SCOPE", color:"oklch(0.62 0.14 300)", desc:"di luar cakupan yang bisa dijawab Tier 0/1" },
+};
+
+const ROOTS = [
+  { id:"rhm", arabic:"ر ح م", lemmaCount:6, occurrenceCount:339, retrieval:[
+    { arabic:"الرَّحْمَٰنِ", ref:"1:1" }, { arabic:"الرَّحِيمِ", ref:"1:1" }, { arabic:"رَحِمَه", ref:"33:43" }, { arabic:"يَرْحَمُكُمُ", ref:"3:132" },
+  ]},
+  { id:"slm", arabic:"س ل م", lemmaCount:8, occurrenceCount:257, retrieval:[
+    { arabic:"السَّلَامُ", ref:"59:23" }, { arabic:"إِسْلَام", ref:"3:19" }, { arabic:"سَلَّمَ", ref:"33:56" },
+  ]},
+];
+
+const HYPOTHESES = [
+  { id:"h1", statement:"Root R-H-M berasosiasi dengan Ghafur lebih sering dari acak", verdict:"SYNC", date:"2026-03-11", summary:"Diuji pada 72 ko-okurensi, konsisten di kedua varian statistik.",
+    operationalDef:"H0: n_ab R-H-M×Ghafur tidak berbeda dari ekspektasi acak. Ditolak pada FDR<0.05 di kedua varian.",
+    history:[{ verdict:"INSUFFICIENT", date:"2025-11-02" }, { verdict:"SYNC", date:"2026-03-11" }],
+    testAyat:[{ ref:"1:3", role:"anchor" }, { ref:"7:167", role:"uji" }] },
+  { id:"h2", statement:"Root R-H-M berasosiasi dengan 'Aziz secara konsisten", verdict:"CONTRADICTED", date:"2026-01-20", summary:"Signifikan di varian raw, tidak signifikan setelah dedup formula.",
+    operationalDef:"H0: asosiasi R-H-M×'Aziz stabil lintas varian statistik. Ditolak — varian formula_reduced menunjukkan hasil berlawanan.",
+    history:[{ verdict:"PARTIAL", date:"2025-09-14" }, { verdict:"CONTRADICTED", date:"2026-01-20" }],
+    testAyat:[{ ref:"9:128", role:"anchor" }, { ref:"4:158", role:"uji" }] },
+  { id:"h3", statement:"Root R-H-M menghindari ko-okurensi dengan Hakiim", verdict:"BEYOND_SCOPE", date:"2026-02-02", summary:"Pola avoidance terdeteksi, namun interpretasi teologisnya di luar cakupan Tier 0/1.",
+    operationalDef:"H0: tidak ada pola avoidance R-H-M×Hakiim. Data mendukung avoidance, tapi makna teologis tidak dapat disimpulkan sistem ini.",
+    history:[{ verdict:"BEYOND_SCOPE", date:"2026-02-02" }],
+    testAyat:[{ ref:"1:1", role:"anchor" }] },
+];
+
+function verdictBadgeStyle(color) {
+  return `display:inline-flex; align-items:center; padding:4px 10px 4px 9px; border-radius:4px; border-left:3px solid ${color}; background:oklch(0.24 0.008 264); font-size:11px; font-weight:600; color:oklch(0.88 0.006 264); letter-spacing:0.01em;`;
+}
+
+class Component extends DCLogic {
+  state = {
+    route:"home", surahNumber:1, navOpen:false, isMobile:false,
+    globalQuery:"", searchQuery:"", indexQuery:"", sidebarQuery:"",
+    surahVisible:12, sidebarVisible:20, ayahVisible:4, tajwidOn:false, sidebarOpen:false,
+    statVariant:"raw", selectedRootId:"rhm", selectedHypothesisId:"h1",
+    selectedWordId:null, selectedWordText:null, currentAyahRef:"1:3",
+  };
+
+  componentDidMount() {
+    this._onResize = () => this.setState({ isMobile: window.innerWidth < 720 });
+    this._onResize();
+    window.addEventListener("resize", this._onResize);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener("resize", this._onResize);
+  }
+
+  go(route, extra) {
+    this.setState({ route, navOpen:false, sidebarOpen:false, ...extra });
+  }
+
+  renderVals() {
+    const m = this.state.isMobile;
+    const route = this.state.route;
+
+    const navList = [
+      { label:"Beranda", route:"home" },
+      { label:"Pembukaan", route:"pembukaan" },
+      { label:"Indeks Surah", route:"surah-index" },
+      { label:"Browser Root", route:"root-index" },
+      { label:"Panduan Metodologi", route:"methodology" },
+      { label:"Jurnal Hipotesis", route:"hypothesis-index" },
+    ];
+    const navItems = navList.map(n => ({
+      label:n.label,
+      onClick: () => this.go(n.route),
+      style: `text-decoration:none; font-size:13px; font-weight:600; color:${route===n.route || (n.route==="surah-index" && (route==="surah"||route==="ayat")) ? "oklch(0.94 0.004 264)" : "oklch(0.6 0.01 264)"}; padding:6px 4px;`,
+    }));
+
+    const homeEntries = [
+      { title:"Indeks Surah", desc:"Jelajahi 114 surah — nama, arti, jumlah ayat, tempat turun.", onClick: () => this.go("surah-index") },
+      { title:"Browser Root", desc:"Telusuri akar kata dan seluruh kemunculannya.", onClick: () => this.go("root-index") },
+      { title:"Panduan Metodologi", desc:"Hirarki data, status verdict, dan grounding anti-halusinasi.", onClick: () => this.go("methodology") },
+      { title:"Jurnal Hipotesis", desc:"Hipotesis penelitian beserta status verdict dan histori.", onClick: () => this.go("hypothesis-index") },
+    ];
+
+    const q = this.state.globalQuery.trim().toLowerCase();
+    const searchResults = q ? [
+      ...SURAHS.filter(s => s.latin.toLowerCase().includes(q) || s.translation.toLowerCase().includes(q)).slice(0,5).map(s => ({
+        title:`Surah ${s.latin}`, preview:s.translation, kind:"Surah", onClick: () => this.go("surah", { surahNumber:s.number }),
+      })),
+      ...ROOTS.filter(r => r.arabic.includes(q) || r.id.includes(q)).map(r => ({
+        title:`Root ${r.arabic}`, preview:`${r.lemmaCount} lemma turunan`, kind:"Root", onClick: () => this.go("root-detail", { selectedRootId:r.id }),
+      })),
+    ] : [];
+
+    const iq = this.state.indexQuery.trim().toLowerCase();
+    const matchedIndex = SURAHS.filter(s => !iq || s.latin.toLowerCase().includes(iq) || s.translation.toLowerCase().includes(iq) || String(s.number)===iq);
+    const filteredSurah = matchedIndex.slice(0, iq ? matchedIndex.length : this.state.surahVisible).map(s => ({
+      ...s, onClick: () => this.go("surah", { surahNumber:s.number }),
+    }));
+
+    const sq = this.state.sidebarQuery.trim().toLowerCase();
+    const matchedSidebar = SURAHS.filter(s => !sq || s.latin.toLowerCase().includes(sq) || String(s.number)===sq);
+    const sidebarSurah = matchedSidebar.slice(0, sq ? matchedSidebar.length : this.state.sidebarVisible).map(s => {
+      const active = s.number === this.state.surahNumber;
+      return {
+        ...s,
+        onSelect: () => this.go("surah", { surahNumber:s.number, ayahVisible:4, sidebarOpen:false }),
+        rowStyle: `display:flex; align-items:center; gap:12px; padding:12px; border-radius:10px; text-decoration:none; color:inherit; border:1px solid ${active ? "oklch(0.55 0.13 275)" : "transparent"}; background:${active ? "oklch(0.28 0.09 275 / 0.28)" : "transparent"};`,
+        badgeStyle: `flex:none; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-family:'Source Serif 4',serif; font-weight:600; font-size:13px; background:${active ? "oklch(0.55 0.13 275)" : "oklch(0.27 0.01 264)"}; color:${active ? "oklch(0.98 0.01 275)" : "oklch(0.7 0.01 264)"};`,
+      };
+    });
+
+    const currentSurah = SURAHS.find(s => s.number === this.state.surahNumber) || SURAHS[0];
+    const isPlaceholderSurah = this.state.surahNumber !== 1;
+    const ayahSource = isPlaceholderSurah ? [] : FATIHAH_AYAHS;
+    const totalAyahs = ayahSource.length;
+    const tajwidOn = this.state.tajwidOn;
+
+    const visibleAyahs = ayahSource.slice(0, this.state.ayahVisible).map(a => {
+      const usedKeys = [...new Set(a.words.filter(([,r]) => r).map(([,r]) => r))];
+      return {
+        ...a,
+        wordsRendered: a.words.map(([text, rule], wi) => ({
+          text, wordId: `${a.ref}-${wi}`,
+          onClick: () => this.go("ayat", { surahNumber:this.state.surahNumber, selectedWordId:`${a.ref}-${wi}`, selectedWordText:text }),
+          style: `cursor:pointer; text-decoration:none; ${rule && tajwidOn ? `color:${TAJWID_RULES[rule].color}; font-weight:700;` : "color:inherit;"}`,
+        })),
+        showAyahLegend: tajwidOn && usedKeys.length > 0,
+        ayahLegend: usedKeys.map(key => ({
+          label: TAJWID_RULES[key].label, dur: TAJWID_RULES[key].dur,
+          dotStyle: `width:8px; height:8px; border-radius:50%; background:${TAJWID_RULES[key].color}; flex:none;`,
+        })),
+        onOpenDetail: () => this.go("ayat", { surahNumber:this.state.surahNumber, selectedWordId:null, selectedWordText:null }),
+      };
+    });
+
+    const variantTabs = ["raw","formula_reduced"].map(v => ({
+      label: v==="raw" ? "Raw" : "Formula Reduced",
+      onClick: () => this.setState({ statVariant:v }),
+      style: `padding:7px 16px; border-radius:999px; border:1px solid ${this.state.statVariant===v ? "oklch(0.5 0.01 264)" : "oklch(0.32 0.01 264)"}; background:${this.state.statVariant===v ? "oklch(0.30 0.01 264)" : "transparent"}; color:${this.state.statVariant===v ? "oklch(0.96 0.004 264)" : "oklch(0.62 0.01 264)"}; font-size:12px; font-weight:600; font-family:Inter,sans-serif; cursor:pointer;`,
+    }));
+    const detailKey = WORD_ID_ALIASES[this.state.selectedWordId] || this.state.selectedWordId;
+    const activeWordDetail = WORD_DETAILS[detailKey];
+    const isWordStub = !!(this.state.selectedWordId && !activeWordDetail);
+    const wordDetail = activeWordDetail || WORD_DETAILS.rahiim;
+
+    const contextAyah = FATIHAH_AYAHS.find(a => a.ref === this.state.currentAyahRef);
+    const ayatWordsRowIsPlaceholder = !contextAyah;
+    const ayatWordsRow = contextAyah
+      ? contextAyah.words.map(([text], idx) => {
+          const wid = `${contextAyah.ref}-${idx}`;
+          const dKey = WORD_ID_ALIASES[wid] || wid;
+          const active = dKey === detailKey;
+          return { text, active,
+            onClick: () => this.setState({ selectedWordId:wid, selectedWordText:text }),
+            style: `cursor:pointer; ${active ? "color:oklch(0.8 0.1 250); font-weight:700;" : "color:inherit;"}` };
+        })
+      : [{ text: wordDetail.arabic, active:true, onClick:null, style:"color:oklch(0.8 0.1 250); font-weight:700;" }];
+    const ayatRefLabel = this.state.currentAyahRef;
+
+    const collocSource = wordDetail.collocations || [];
+    const collocations = collocSource.map(c => {
+      const v = c[this.state.statVariant];
+      return {
+        arabic:c.arabic, humanSentence:c.humanSentence, linkWordId:c.linkWordId,
+        onClick: c.linkWordId ? (() => this.go("ayat", { surahNumber:this.state.surahNumber, selectedWordId:c.linkWordId, selectedWordText:WORD_DETAILS[c.linkWordId].arabic })) : null,
+        n:v.n, g2:v.g2, pmi:v.pmi, fdr:v.fdr, pLabel:v.pLabel,
+        concentrationWarning: v.topSurahShare >= 0.5,
+        topSurahSharePct: Math.round(v.topSurahShare*100)+"%",
+        directionLabel: v.direction==="avoidance" ? "Pola saling menghindar" : "Asosiasi (berdampingan)",
+        directionStyle: `font-size:11px; font-weight:600; padding:3px 10px; border-radius:999px; background:${v.direction==="avoidance" ? "oklch(0.55 0.01 264 / 0.2)" : "oklch(0.65 0.13 165 / 0.18)"}; color:${v.direction==="avoidance" ? "oklch(0.7 0.01 264)" : "oklch(0.75 0.12 165)"};`,
+        rowStyle: `padding:14px 0; border-top:1px solid oklch(0.26 0.008 264); ${c.linkWordId ? "cursor:pointer;" : ""}`,
+      };
+    });
+    collocations.forEach((c, i) => {
+      const link = collocSource[i].linkWordId;
+      if (link) c.onClick = () => this.setState({ selectedWordId:link, selectedWordText:WORD_DETAILS[link].arabic, currentAyahRef:WORD_DETAILS[link].ayahRef });
+    });
+
+    const roots = ROOTS.map(r => ({ ...r, onClick: () => this.go("root-detail", { selectedRootId:r.id }) }));
+    const selectedRoot = ROOTS.find(r => r.id === this.state.selectedRootId) || ROOTS[0];
+
+    const verdictLegend = Object.values(VERDICT_META).map(v => ({
+      label:v.label, desc:v.desc, dotStyle:`width:10px; height:10px; border-radius:50%; background:${v.color}; flex:none;`,
+    }));
+
+    const hypotheses = HYPOTHESES.map(h => {
+      const vm = VERDICT_META[h.verdict];
+      return { ...h, onClick: () => this.go("hypothesis-detail", { selectedHypothesisId:h.id }), verdictLabel:vm.label, verdictStyle:verdictBadgeStyle(vm.color) };
+    });
+    const rawHyp = HYPOTHESES.find(h => h.id === this.state.selectedHypothesisId) || HYPOTHESES[0];
+    const selectedHypothesis = {
+      ...rawHyp,
+      verdictLabel: VERDICT_META[rawHyp.verdict].label,
+      verdictStyle: verdictBadgeStyle(VERDICT_META[rawHyp.verdict].color),
+      history: rawHyp.history.map(hv => ({ ...hv, verdictLabel:VERDICT_META[hv.verdict].label, verdictStyle:verdictBadgeStyle(VERDICT_META[hv.verdict].color) })),
+    };
+
+    const layerCardStyle = "background:oklch(0.215 0.006 264); border:1px solid oklch(0.30 0.01 264); border-radius:14px; padding:20px 22px; margin-bottom:16px;";
+    const layerTitleStyle = "font-family:'Source Serif 4',serif; font-weight:600; font-size:15px; margin-bottom:12px; color:oklch(0.8 0.01 264);";
+    const disclaimerStyle = "font-size:11px; color:oklch(0.55 0.01 264); margin-top:10px; font-style:italic;";
+
+    return {
+      isHome: route==="home", isSearch: route==="search", isSurahIndex: route==="surah-index",
+      isSurah: route==="surah", isAyat: route==="ayat", isRootIndex: route==="root-index",
+      isRootDetail: route==="root-detail", isMethodology: route==="methodology",
+      isHypothesisIndex: route==="hypothesis-index", isHypothesisDetail: route==="hypothesis-detail",
+      isPembukaan: route==="pembukaan",
+      pembukaanExamples: [
+        { title:"Contoh 1", refA:"QS 1:6-7 (Al-Fatihah)", captionA:"\"Jalan yang lurus\" diminta secara umum.", refB:"QS 4:69 (An-Nisa)", captionB:"Dijelaskan konkret: jalan para nabi, orang jujur, syuhada, dan orang saleh." },
+        { title:"Contoh 2", refA:"QS 2:2-5 (Al-Baqarah)", captionA:"Ciri \"orang yang beruntung\" disebut ringkas.", refB:"QS 23:1-11 (Al-Mu'minun)", captionB:"Ciri yang sama dijelaskan lebih rinci." },
+      ],
+
+      goHome: () => this.go("home"),
+      navItems, navOpen: this.state.navOpen && m,
+      onToggleNav: () => this.setState(s => ({ navOpen: !s.navOpen })),
+      desktopNavStyle: m ? "display:none;" : "display:flex; align-items:center; gap:22px;",
+      navToggleBtnStyle: m ? "flex:none; width:36px; height:36px; border-radius:8px; border:1px solid oklch(0.34 0.01 264); background:oklch(0.24 0.008 264); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer;" : "display:none;",
+
+      onContentScroll: e => {
+        if (this.state.route !== "surah-index" || this.state.surahVisible >= SURAHS.length) return;
+        const el = e.target;
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 400) {
+          this.setState(s => ({ surahVisible: Math.min(s.surahVisible + 12, SURAHS.length) }));
+        }
+      },
+      globalQuery: this.state.globalQuery,
+      onGlobalQueryChange: e => this.setState({ globalQuery: e.target.value }),
+      onGlobalSearchKey: e => { if (e.key==="Enter") this.go("search"); },
+      homeEntries,
+      searchResults, noSearchResults: q.length>0 && searchResults.length===0,
+
+      indexQuery: this.state.indexQuery, onIndexQueryChange: e => this.setState({ indexQuery: e.target.value }),
+      filteredSurah, surahHasMore: !iq && this.state.surahVisible < SURAHS.length,
+      pagePad: m ? "24px 16px 0;" : "32px 28px 0;", titleSize: m ? "22px" : "28px",
+      gridStyle: `display:grid; grid-template-columns:${m ? "1fr" : "repeat(3,1fr)"}; gap:${m?"12px":"16px"};`,
+      cardArabicStyle: `flex:none; font-family:'Amiri',serif; font-size:${m?"20px":"24px"}; color:oklch(0.78 0.006 264); line-height:1;`,
+
+      sidebarQuery: this.state.sidebarQuery, onSidebarQueryChange: e => this.setState({ sidebarQuery: e.target.value }),
+      onSidebarScroll: e => { const el=e.target; if (this.state.sidebarVisible>=SURAHS.length) return; if (el.scrollTop+el.clientHeight>=el.scrollHeight-200) this.setState(s=>({sidebarVisible:Math.min(s.sidebarVisible+20,SURAHS.length)})); },
+      sidebarSurah, sidebarHasMore: !sq && this.state.sidebarVisible < SURAHS.length,
+      onOpenSidebar: () => this.setState({ sidebarOpen:true }), onCloseSidebarBackdrop: () => this.setState({ sidebarOpen:false }),
+      sidebarStyle: m
+        ? `position:fixed; top:0; left:0; bottom:0; width:280px; z-index:20; background:oklch(0.17 0.006 264); border-right:1px solid oklch(0.28 0.01 264); display:flex; flex-direction:column; min-height:0; transform:translateX(${this.state.sidebarOpen?"0":"-100%"}); transition:transform 0.2s ease;`
+        : "flex:none; width:300px; border-right:1px solid oklch(0.28 0.01 264); display:flex; flex-direction:column; min-height:0;",
+      backdropStyle: m && this.state.sidebarOpen ? "position:fixed; inset:0; background:oklch(0 0 0 / 0.5); z-index:15;" : "display:none;",
+      mobileSurahHeaderStyle: m ? "display:flex; align-items:center; gap:10px; margin-bottom:20px;" : "display:none;",
+
+      currentSurah, isPlaceholderSurah, visibleAyahs,
+      ayahHasMore: this.state.ayahVisible < totalAyahs,
+      onMainScroll: e => { const el=e.target; if (this.state.ayahVisible>=totalAyahs) return; if (el.scrollTop+el.clientHeight>=el.scrollHeight-300) this.setState(s=>({ayahVisible:Math.min(s.ayahVisible+4,totalAyahs)})); },
+      onToggleTajwid: () => this.setState(s => ({ tajwidOn: !s.tajwidOn })),
+      tajwidToggleState: this.state.tajwidOn ? "Aktif" : "Nonaktif",
+      tajwidToggleStyle: `display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:999px; border:1px solid ${this.state.tajwidOn?"oklch(0.55 0.13 250)":"oklch(0.34 0.01 264)"}; background:${this.state.tajwidOn?"oklch(0.55 0.13 250 / 0.16)":"oklch(0.24 0.008 264)"}; color:${this.state.tajwidOn?"oklch(0.8 0.1 250)":"oklch(0.62 0.01 264)"}; font-size:13px; font-weight:600; font-family:Inter,sans-serif; cursor:pointer;`,
+      tajwidToggleDotStyle: `width:8px; height:8px; border-radius:50%; background:${this.state.tajwidOn?"oklch(0.7 0.14 250)":"oklch(0.45 0.01 264)"};`,
+
+      onBackToSurah: () => this.go("surah", { surahNumber:this.state.surahNumber }),
+      isWordStub, isWordStubOff: !isWordStub,
+      selectedWordText: this.state.selectedWordText,
+      wordDetail, ayatWordsRow, ayatWordsRowIsPlaceholder, ayatRefLabel, variantTabs, collocations,
+      layerCardStyle, layerTitleStyle, disclaimerStyle,
+
+      roots, selectedRoot, onBackToRootIndex: () => this.go("root-index"),
+      verdictLegend,
+      hypotheses, selectedHypothesis, onBackToHypotheses: () => this.go("hypothesis-index"),
+    };
+  }
+}
+
+</script>
+</body>
+</html>
