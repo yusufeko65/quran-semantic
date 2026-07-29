@@ -744,3 +744,30 @@ html:not([data-theme="manuscript"]) .wd-layer:first-of-type {
 html:not([data-theme="manuscript"]) .wd-layer:last-of-type {
   margin-bottom: 0;
 }
+
+/* ------------------------------------------------------------
+   §7 — ayah.blade.php belum sungguh dikerjakan di §5/§6: token warna
+   sudah tereskin (var()-driven, otomatis ikut §5), TAPI .mushaf/
+   .ayah-translation/.wordgloss-section masih pakai treatment manuskrip
+   lama — background = var(--paper) (SAMA dgn bg halaman, jadi tidak
+   "mengambang" sbg kartu) + garis bingkai dekoratif ::before (relik
+   naskah). Mockup tidak punya kotak mushaf sama sekali (hanya baris
+   kata polos + kartu Lapisan 1-4) — tapi terjemahan Kemenag & gloss
+   per-kata di sini adalah FUNGSI NYATA yang tidak ada di mockup
+   (prototipe tidak memodelkannya), jadi TIDAK dihapus — cukup diberi
+   bahasa visual kartu yang konsisten dgn §5/§6 (elevasi dari bg,
+   tanpa bingkai dekoratif manuskrip). Discope Modern-only.
+   ------------------------------------------------------------ */
+html:not([data-theme="manuscript"]) .mushaf,
+html:not([data-theme="manuscript"]) .ayah-translation,
+html:not([data-theme="manuscript"]) .wordgloss-section {
+  background: var(--paper-panel);
+  padding: 1.5rem 1.6rem;
+}
+html:not([data-theme="manuscript"]) .mushaf::before {
+  content: none; /* buang bingkai inset dekoratif — relik gaya naskah */
+}
+html:not([data-theme="manuscript"]) .mushaf-text {
+  font-size: 1.9rem;
+  line-height: 2.2;
+}
