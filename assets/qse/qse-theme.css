@@ -625,6 +625,8 @@ html[data-theme="manuscript"] .wordgloss.active { border-radius: 3px; }
 
 :root {
   --muhkamat-accent: oklch(0.78 0.13 85); /* emas terang — kontras di latar gelap, terpisah dari --gold (biru-indigo) */
+  --ayah-ref-accent: oklch(0.64 0.12 165); /* teal — nomor ayat di halaman baca-menerus, sesuai mockup */
+  --sidebar-active-accent: oklch(0.55 0.13 275); /* ungu-indigo — item surah aktif di sidebar, sesuai mockup */
 }
 
 /* ---- Header & nav ---- */
@@ -705,12 +707,23 @@ html[data-theme="manuscript"] .wordgloss.active { border-radius: 3px; }
 .surah-sidebar-item {
   display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.6rem; border-radius: 8px;
   text-decoration: none; color: var(--ink); font-size: 0.85rem;
+  border: 1px solid transparent;
 }
 .surah-sidebar-item:hover { background: var(--paper-panel); }
-.surah-sidebar-item.active { background: color-mix(in srgb, var(--gold) 16%, transparent); }
+/* Item aktif: warna/border/badge sesuai mockup (aksen ungu-indigo terpisah
+   dari --gold, dipakai KHUSUS di sini) — review visual, HANDOFF-CODE-
+   redesign-ui-lanjutan §surah #surah-sidebar-active. */
+.surah-sidebar-item.active {
+  border-color: var(--sidebar-active-accent, var(--gold));
+  background: color-mix(in srgb, var(--sidebar-active-accent, var(--gold)) 20%, transparent);
+}
 .surah-sidebar-item .badge {
   flex: none; width: 26px; height: 26px; border-radius: 7px; background: var(--paper-raised);
   display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 0.68rem; color: var(--ink-faint);
+}
+.surah-sidebar-item.active .badge {
+  background: var(--sidebar-active-accent, var(--gold));
+  color: var(--paper);
 }
 .surah-main { flex: 1; min-width: 0; padding-left: 1.6rem; }
 @media (max-width: 900px) {

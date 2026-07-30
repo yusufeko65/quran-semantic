@@ -96,15 +96,6 @@
             @endforeach
         </div>
 
-        @if ($hasTajwid)
-            <div class="ayah-focus-controls">
-                <button type="button" class="tajwid-toggle" id="tajwid-toggle"
-                        aria-pressed="true" aria-controls="mushaf-text">
-                    Tajwid: <span class="state">warna</span>
-                </button>
-            </div>
-        @endif
-
         @unless ($tajweedPerWordAvailable)
             <p class="tajwid-caption">
                 Pewarnaan tajwid per-kata belum tersedia untuk ayat ini — tokenisasi sumber
@@ -113,35 +104,9 @@
             </p>
         @endunless
 
-        @if ($hasTajwid)
-            <p class="tajwid-caption" id="tajwid-caption">
-                Warna pada teks menandai <strong>cara membaca</strong> (tajwid) — bukan makna kata (§5).
-            </p>
-            <div class="tajwid-legend" id="tajwid-legend">
-                <span class="swatch"><i class="sw sw-hamzat_wasl"></i>hamzat wasl</span>
-                <span class="swatch"><i class="sw sw-lam_shamsiyyah"></i>lam syamsiyyah</span>
-                <span class="swatch"><i class="sw sw-silent"></i>silent</span>
-                <span class="swatch"><i class="sw sw-ghunnah"></i>ghunnah</span>
-                <span class="swatch"><i class="sw sw-idghaam_ghunnah"></i>idgham ghunnah</span>
-                <span class="swatch"><i class="sw sw-idghaam_no_ghunnah"></i>idgham bila ghunnah</span>
-                <span class="swatch"><i class="sw sw-idghaam_shafawi"></i>idgham syafawi</span>
-                <span class="swatch"><i class="sw sw-idghaam_mutajanisayn"></i>idgham mutajanisain</span>
-                <span class="swatch"><i class="sw sw-idghaam_mutaqaribayn"></i>idgham mutaqaribain</span>
-                <span class="swatch"><i class="sw sw-ikhfa"></i>ikhfa</span>
-                <span class="swatch"><i class="sw sw-ikhfa_shafawi"></i>ikhfa syafawi</span>
-                <span class="swatch"><i class="sw sw-iqlab"></i>iqlab</span>
-                <span class="swatch"><i class="sw sw-qalqalah"></i>qalqalah</span>
-                <span class="swatch"><i class="sw sw-madd_2"></i>madd 2 harakat</span>
-                <span class="swatch"><i class="sw sw-madd_246"></i>madd 2/4/6</span>
-                <span class="swatch"><i class="sw sw-madd_6"></i>madd 6 harakat</span>
-                <span class="swatch"><i class="sw sw-madd_munfasil"></i>madd munfasil</span>
-                <span class="swatch"><i class="sw sw-madd_muttasil"></i>madd muttasil</span>
-            </div>
-        @endif
-
         {{-- ————— TERJEMAHAN AYAT — dipertahankan, gaya slim (bukan kotak besar) ————— --}}
         <div class="ayah-focus-translation">
-            <div class="surah-ayah-tr-label">Terjemahan ayat · Kemenag RI</div>
+            <div class="surah-ayah-tr-label">Terjemahan ayat · {{ $translation->source->name ?? 'sumber tercantum' }}</div>
             @if ($translation)
                 <div class="surah-ayah-translation">{{ $translation->text }}</div>
                 <p class="strip-note">
