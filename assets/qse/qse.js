@@ -283,16 +283,21 @@
     // Delegasi (bukan querySelectorAll langsung) — .colloc-variant-tab
     // baru ada setelah konten AJAX Lapisan 3 dimuat ke `panel`, jadi
     // listener dipasang di `panel` (statis sejak render awal) dan
-    // menangkap klik lewat bubbling. Tab hanya scroll+highlight, TIDAK
-    // menyembunyikan variant lain (lihat catatan di renderVerses).
+    // menangkap klik lewat bubbling. Tab switch ASLI (satu tampil, satu
+    // disembunyikan lewat class, bukan dihapus dari DOM) — keputusan sadar
+    // pemilik proyek yang menimpa aturan lama "selalu berdampingan"
+    // (lihat catatan panjang di renderVerses + HANDOFF-CODE-07).
     panel.addEventListener('click', (e) => {
       const btn = e.target.closest('.colloc-variant-tab');
       if (!btn) return;
-      const target = document.getElementById(btn.getAttribute('data-colloc-target'));
-      if (!target) return;
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      target.classList.add('colloc-variant--highlight');
-      setTimeout(() => target.classList.remove('colloc-variant--highlight'), 1200);
+      const tabs = btn.parentElement.querySelectorAll('.colloc-variant-tab');
+      const collocRoot = btn.closest('.wd-layer').querySelector('.colloc');
+      tabs.forEach((t) => t.classList.remove('active'));
+      btn.classList.add('active');
+      collocRoot.querySelectorAll('.colloc-variant').forEach((v) => {
+        v.classList.toggle('colloc-variant--hidden', v.id !== btn.getAttribute('data-colloc-target'));
+      });
+      collocRoot.scrollTop = 0;
     });
   });
 
@@ -529,7 +534,7 @@
 
     const totalStatusChanged = raw.filter((c) => c.status_changed).length;
 
-    const variantBlock = (title, wrap, variantKey, otherByPartner, wordId) => {
+    const variantBlock = (title, wrap, variantKey, otherByPartner, wordId, extraClass) => {
       const list = wrap.items || [];
       if (!list.length) return '';
       const g = groupByDirection(list);
@@ -551,7 +556,7 @@
         inner += `<p class="colloc-avoidance-heading">Pola saling menghindar (bukan kolokasi)</p>` +
           g.avoidance.map(rowOf).join('');
       }
-      return `<div class="colloc-variant" id="colloc-variant-${esc(variantKey)}-${esc(wordId)}">` +
+      return `<div class="colloc-variant${extraClass || ''}" id="colloc-variant-${esc(variantKey)}-${esc(wordId)}">` +
         `<p class="colloc-variant-title">${esc(title)}</p>${inner}</div>`;
     };
 
@@ -567,19 +572,26 @@
           `<strong>mentah</strong> dan <strong>formula dikurangi</strong> — lihat catatan di tiap pasangan ` +
           `bertanda ⚠ di bawah.</p>`
         : '';
-      // Tab navigasi VISUAL — TIDAK menyembunyikan salah satu varian (§14
-      // aturan 3 / SPESIFIKASI-KONTEN-HALAMAN #3: dua varian selalu
-      // berdampingan). Klik hanya scroll+highlight ke section itu; kedua
-      // section tetap ada di DOM dan bisa dibaca tanpa interaksi apa pun.
+      // Tab switch ASLI (satu tampil, satu tersembunyi) — KEPUTUSAN SADAR
+      // pemilik proyek yang MENIMPA aturan lama "dua varian selalu
+      // berdampingan" (SPESIFIKASI-KONTEN-HALAMAN #3, sebelumnya dijaga
+      // ketat di HANDOFF-CODE-04/06 sbg tab VISUAL-saja/tidak menyembunyikan).
+      // Dikonfirmasi eksplisit 2x oleh pemilik proyek setelah melihat hasil
+      // nyata (page terlalu panjang ke bawah kalau kedua varian sekaligus
+      // dibentangkan) — lihat HANDOFF-CODE-07. Kedua varian TETAP ada di
+      // DOM (tidak dihapus/di-lazy-load ulang), cuma disembunyikan lewat
+      // class `.colloc-variant--hidden` (display:none) — beda dgn
+      // benar-benar membuang data. "Raw" aktif secara default.
       const variantTabs = (raw.length && reduced.length)
         ? `<div class="colloc-variant-tabs">` +
-          `<button type="button" class="colloc-variant-tab" data-colloc-target="colloc-variant-raw-${esc(wordId)}">Raw</button>` +
+          `<button type="button" class="colloc-variant-tab active" data-colloc-target="colloc-variant-raw-${esc(wordId)}">Raw</button>` +
           `<button type="button" class="colloc-variant-tab" data-colloc-target="colloc-variant-formula_reduced-${esc(wordId)}">Formula Reduced</button>` +
           `</div>`
         : '';
-      html += tensionBanner + variantTabs + `<div class="colloc">` +
+      const hideReduced = raw.length && reduced.length ? ' colloc-variant--hidden' : '';
+      html += tensionBanner + variantTabs + `<div class="colloc colloc-scroll">` +
         variantBlock('Mentah (raw)', rawWrap, 'raw', reducedByPartner, wordId) +
-        variantBlock('Formula dikurangi (basmalah dkk. dibuang)', reducedWrap, 'formula_reduced', rawByPartner, wordId) +
+        variantBlock('Formula dikurangi (basmalah dkk. dibuang)', reducedWrap, 'formula_reduced', rawByPartner, wordId, hideReduced) +
         `</div>`;
       html += disclaimer(stats.status_epistemik ||
         'Angka kolokasi adalah data pola penggunaan — bukan makna (§14). PMI/rasio = ' +

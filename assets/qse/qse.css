@@ -1131,14 +1131,19 @@ h1.page-title {
 }
 
 /* ============================================================
-   QSE — Lapisan 3: tab navigasi visual raw/formula_reduced
-   [TAMBAHKAN DI AKHIR qse.css — review visual, HANDOFF-CODE-redesign-
-   ui-lanjutan §ayah #wd-layer]
-   PENTING: tab ini HANYA scroll+highlight (lihat qse.js), TIDAK
-   menyembunyikan salah satu varian — dua varian statistik WAJIB selalu
-   terlihat berdampingan (SPESIFIKASI-KONTEN-HALAMAN #3). Kalau nanti ada
-   yang tergoda mengubah ini jadi show/hide asli, itu melanggar aturan
-   epistemik yang sudah dikonfirmasi eksplisit ke pemilik proyek.
+   QSE — Lapisan 3: tab switch raw/formula_reduced (kotak scroll)
+   [TAMBAHKAN DI AKHIR qse.css — HANDOFF-CODE-07]
+   KEPUTUSAN SADAR pemilik proyek (dikonfirmasi 2x setelah melihat hasil
+   nyata) yang MENIMPA aturan lama "dua varian selalu berdampingan"
+   (SPESIFIKASI-KONTEN-HALAMAN #3) — sebelumnya tab di sini sengaja
+   dibuat visual-only (scroll+highlight, tidak menyembunyikan) per
+   HANDOFF-CODE-06. Sekarang klik tab benar-benar switch tampilan (satu
+   terlihat, satu `display:none` lewat .colloc-variant--hidden) — TAPI
+   kedua varian tetap ada penuh di DOM/HTML (bukan dihapus atau baru
+   di-fetch ulang), jadi masih bisa diaudit/dibaca lewat "lihat kode
+   sumber", cuma tidak dua-duanya kelihatan SEKALIGUS di layar. Kalau
+   pertimbangan ini perlu ditinjau ulang, ini keputusan pemilik proyek,
+   bukan bug — jangan "diperbaiki" balik ke visual-only tanpa konfirmasi.
    ============================================================ */
 .colloc-variant-tabs { display: flex; gap: 0.5rem; margin: 0.6rem 0 1rem; }
 .colloc-variant-tab {
@@ -1148,7 +1153,8 @@ h1.page-title {
   padding: 0.35rem 0.9rem; cursor: pointer;
 }
 .colloc-variant-tab:hover { border-color: var(--gold); color: var(--ink); }
-.colloc-variant--highlight {
-  outline: 2px solid var(--gold); outline-offset: 4px;
-  transition: outline-color 0.2s ease;
+.colloc-variant-tab.active {
+  background: var(--gold); border-color: var(--gold); color: var(--paper);
 }
+.colloc-scroll { max-height: 60vh; overflow-y: auto; padding-right: 0.4rem; }
+.colloc-variant--hidden { display: none; }
