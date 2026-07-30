@@ -107,16 +107,21 @@ class PageController extends Controller
         $ayahs = $s->ayahs()->with('words')->orderBy('number_in_surah')->paginate(30);
 
         // Terjemahan per ayat, satu query batch (pola sama dgn ayah(),
-        // diperluas utk sehalaman ayat sekaligus).
+        // diperluas utk sehalaman ayat sekaligus). Sumber (nama Kemenag RI
+        // dkk.) ikut di-load — label "Kemenag RI" WAJIB dari DB, bukan
+        // teks tetap di Blade (temuan review visual, HANDOFF-CODE-redesign-
+        // ui-lanjutan).
         $translations = Translation::query()
             ->whereIn('ayah_id', $ayahs->pluck('id'))
             ->orderByRaw('lang = ? DESC', [config('qse.translation_lang', 'id')])
+            ->with('source:id,name')
             ->get()
             ->unique('ayah_id')
             ->keyBy('ayah_id');
 
         foreach ($ayahs as $a) {
             $a->translation_text = $translations[$a->id]->text ?? null;
+            $a->translation_source_name = $translations[$a->id]->source->name ?? null;
             $tajweedByWord = $tajweed->segmentsPerWord($a);
             foreach ($a->words as $w) {
                 $w->tajweed_segments = $tajweedByWord[$w->id] ?? [];

@@ -52,6 +52,41 @@
         }
 
         $hasTajwid = $ayahs->contains(fn ($a) => collect($a->words)->contains(fn ($w) => !empty($w->tajweed_segments ?? null)));
+
+        // Metadata tajwid (label + durasi ketukan) — teks metodologi tajwid
+        // baku, sama seperti daftar 18-kode di legenda lama, dipetakan ulang
+        // per-ayat (bukan sekali di akhir halaman) sesuai review visual
+        // (HANDOFF-CODE-redesign-ui-lanjutan §surah #tajwid-legend).
+        $tajwidRuleMeta = [
+            'hamzat_wasl'          => ['label' => 'Hamzat Wasl', 'dur' => 'tidak dibaca saat disambung'],
+            'lam_shamsiyyah'       => ['label' => 'Lam Syamsiyyah', 'dur' => 'melebur ke huruf berikutnya'],
+            'silent'               => ['label' => 'Silent', 'dur' => 'tidak dibunyikan'],
+            'ghunnah'              => ['label' => 'Ghunnah', 'dur' => 'dengung 2 ketukan'],
+            'idghaam_ghunnah'      => ['label' => 'Idgham Bighunnah', 'dur' => 'melebur, dengung 2 ketukan'],
+            'idghaam_no_ghunnah'   => ['label' => 'Idgham Bila Ghunnah', 'dur' => 'melebur, tanpa dengung'],
+            'idghaam_shafawi'      => ['label' => 'Idgham Syafawi', 'dur' => 'melebur, dengung 2 ketukan'],
+            'idghaam_mutajanisayn' => ['label' => 'Idgham Mutajanisain', 'dur' => 'melebur, makhraj sama'],
+            'idghaam_mutaqaribayn' => ['label' => 'Idgham Mutaqaribain', 'dur' => 'melebur, makhraj berdekatan'],
+            'ikhfa'                => ['label' => 'Ikhfa', 'dur' => 'samar, dengung 2 ketukan'],
+            'ikhfa_shafawi'        => ['label' => 'Ikhfa Syafawi', 'dur' => 'samar pada mim, dengung 2 ketukan'],
+            'iqlab'                => ['label' => 'Iqlab', 'dur' => 'berubah ke bunyi mim, dengung 2 ketukan'],
+            'qalqalah'             => ['label' => 'Qalqalah', 'dur' => 'pantulan bunyi'],
+            'madd_2'               => ['label' => 'Madd 2 Harakat', 'dur' => 'panjang 2 ketukan'],
+            'madd_246'             => ['label' => 'Madd 2/4/6 Harakat', 'dur' => 'panjang 2, 4, atau 6 ketukan'],
+            'madd_6'               => ['label' => 'Madd 6 Harakat', 'dur' => 'panjang 6 ketukan'],
+            'madd_munfasil'        => ['label' => 'Madd Munfasil', 'dur' => 'panjang 4-5 ketukan'],
+            'madd_muttasil'        => ['label' => 'Madd Muttasil', 'dur' => 'panjang 4-5 ketukan'],
+        ];
+
+        $ayahLegendFor = function ($ayah) use ($tajwidRuleMeta) {
+            $rules = collect($ayah->words)
+                ->flatMap(fn ($w) => collect($w->tajweed_segments ?? [])->pluck('rule'))
+                ->unique()
+                ->filter(fn ($r) => isset($tajwidRuleMeta[$r]))
+                ->values();
+
+            return $rules->map(fn ($r) => ['key' => $r] + $tajwidRuleMeta[$r]);
+        };
     @endphp
 
     <div class="surah-layout">
@@ -91,6 +126,7 @@
 
             <div class="surah-reader tajwid-on mushaf-text" id="mushaf-text">
                 @foreach ($ayahs as $a)
+                    @php $ayahLegend = $ayahLegendFor($a); @endphp
                     <article class="surah-ayah-row">
                         <div class="surah-ayah-side">
                             <span class="surah-ayah-ref">{{ $a->ref }}</span>
@@ -98,43 +134,31 @@
                                class="surah-ayah-detail-btn" title="Buka detail ayat/kata"><span class="arrow-icon"></span></a>
                         </div>
                         <div class="surah-ayah-content">
+                            {{-- Kata TIDAK bisa diklik di halaman ini (review visual) —
+                                 navigasi ke detail hanya lewat tombol panah di kiri. --}}
                             <div class="surah-ayah-words" dir="rtl">
                                 @foreach ($a->words as $w)
-                                    <a href="{{ route('qse.page.ayah', [$surah->id, $a->number_in_surah]) }}"
-                                       class="qword">{!! qseRenderTajweedWord($w) !!}</a>
+                                    <span class="qword-static">{!! qseRenderTajweedWord($w) !!}</span>
                                 @endforeach
                             </div>
-                            <div class="surah-ayah-tr-label">Kemenag RI</div>
+                            <div class="surah-ayah-tr-label">{{ $a->translation_source_name ?? 'Terjemahan' }}</div>
                             <div class="surah-ayah-translation">
                                 {{ $a->translation_text ?? 'Terjemahan belum dimuat.' }}
                             </div>
+                            @if ($ayahLegend->isNotEmpty())
+                                <div class="ayah-legend">
+                                    @foreach ($ayahLegend as $tl)
+                                        <span class="ayah-legend-item">
+                                            <i class="ayah-legend-dot sw-{{ $tl['key'] }}"></i>
+                                            {{ $tl['label'] }} <span class="ayah-legend-dur">— {{ $tl['dur'] }}</span>
+                                        </span>
+                                    @endforeach
+                                </div>
+                            @endif
                         </div>
                     </article>
                 @endforeach
             </div>
-
-            @if ($hasTajwid)
-                <div class="tajwid-legend" id="tajwid-legend">
-                    <span class="swatch"><i class="sw sw-hamzat_wasl"></i>hamzat wasl</span>
-                    <span class="swatch"><i class="sw sw-lam_shamsiyyah"></i>lam syamsiyyah</span>
-                    <span class="swatch"><i class="sw sw-silent"></i>silent</span>
-                    <span class="swatch"><i class="sw sw-ghunnah"></i>ghunnah</span>
-                    <span class="swatch"><i class="sw sw-idghaam_ghunnah"></i>idgham ghunnah</span>
-                    <span class="swatch"><i class="sw sw-idghaam_no_ghunnah"></i>idgham bila ghunnah</span>
-                    <span class="swatch"><i class="sw sw-idghaam_shafawi"></i>idgham syafawi</span>
-                    <span class="swatch"><i class="sw sw-idghaam_mutajanisayn"></i>idgham mutajanisain</span>
-                    <span class="swatch"><i class="sw sw-idghaam_mutaqaribayn"></i>idgham mutaqaribain</span>
-                    <span class="swatch"><i class="sw sw-ikhfa"></i>ikhfa</span>
-                    <span class="swatch"><i class="sw sw-ikhfa_shafawi"></i>ikhfa syafawi</span>
-                    <span class="swatch"><i class="sw sw-iqlab"></i>iqlab</span>
-                    <span class="swatch"><i class="sw sw-qalqalah"></i>qalqalah</span>
-                    <span class="swatch"><i class="sw sw-madd_2"></i>madd 2 harakat</span>
-                    <span class="swatch"><i class="sw sw-madd_246"></i>madd 2/4/6</span>
-                    <span class="swatch"><i class="sw sw-madd_6"></i>madd 6 harakat</span>
-                    <span class="swatch"><i class="sw sw-madd_munfasil"></i>madd munfasil</span>
-                    <span class="swatch"><i class="sw sw-madd_muttasil"></i>madd muttasil</span>
-                </div>
-            @endif
 
             {{ $ayahs->links() }}
         </div>
