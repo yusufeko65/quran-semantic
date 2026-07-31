@@ -32,16 +32,25 @@
       <span style="font-family:'Source Serif 4',serif; font-weight:700; font-size:18px;">Quran Semantic Explorer</span>
       <span style="font-size:11px; color:oklch(0.58 0.01 264);">Jurnal Penelitian Linguistik — Data Driven</span>
     </a>
-    <div style="{{ desktopNavStyle }}">
-      <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="5">
-        <a href="#" onClick="{{ item.onClick }}" style="{{ item.style }}">{{ item.label }}</a>
-      </sc-for>
-    </div>
-    <button onClick="{{ onToggleNav }}" style="{{ navToggleBtnStyle }}">
-      <div style="width:16px; height:2px; background:oklch(0.7 0.01 264);"></div>
-      <div style="width:16px; height:2px; background:oklch(0.7 0.01 264);"></div>
-      <div style="width:16px; height:2px; background:oklch(0.7 0.01 264);"></div>
-    </button>
+    <sc-if value="{{ isPublicArea }}" hint-placeholder-val="{{ true }}">
+      <div style="{{ desktopNavStyle }}">
+        <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="5">
+          <a href="#" onClick="{{ item.onClick }}" style="{{ item.style }}">{{ item.label }}</a>
+        </sc-for>
+        <a href="#" onClick="{{ onGoAuthArea }}" style="text-decoration:none; font-size:12px; font-weight:600; color:oklch(0.55 0.01 264); border:1px solid oklch(0.34 0.01 264); border-radius:999px; padding:6px 14px;">{{ authAreaLabel }}</a>
+      </div>
+      <button onClick="{{ onToggleNav }}" style="{{ navToggleBtnStyle }}">
+        <div style="width:16px; height:2px; background:oklch(0.7 0.01 264);"></div>
+        <div style="width:16px; height:2px; background:oklch(0.7 0.01 264);"></div>
+        <div style="width:16px; height:2px; background:oklch(0.7 0.01 264);"></div>
+      </button>
+    </sc-if>
+    <sc-if value="{{ isAuthArea }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex; align-items:center; gap:14px;">
+        <span style="font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:oklch(0.6 0.13 275);">Area Kurator/Admin</span>
+        <a href="#" onClick="{{ goHome }}" style="text-decoration:none; font-size:12px; color:oklch(0.55 0.01 264);">Keluar ke situs publik</a>
+      </div>
+    </sc-if>
   </div>
 
   <sc-if value="{{ navOpen }}" hint-placeholder-val="{{ false }}">
@@ -53,6 +62,136 @@
   </sc-if>
 
   <div onScroll="{{ onContentScroll }}" style="flex:1; min-height:0; overflow-y:auto;">
+
+    <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:400px; margin:0 auto; padding:60px 24px;">
+        <div style="text-align:center; margin-bottom:28px;">
+          <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:24px;">Masuk</div>
+          <div style="font-size:13px; color:oklch(0.58 0.01 264); margin-top:6px;">Area Kurator/Admin — Quran Semantic Explorer</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div>
+            <div style="font-size:12px; font-weight:600; color:oklch(0.62 0.01 264); margin-bottom:6px;">Email</div>
+            <input value="{{ loginEmail }}" onChange="{{ onLoginEmailChange }}" type="email" placeholder="nama@instansi.id" style="{{ inputStyle }}">
+          </div>
+          <div>
+            <div style="font-size:12px; font-weight:600; color:oklch(0.62 0.01 264); margin-bottom:6px;">Kata Sandi</div>
+            <input value="{{ loginPassword }}" onChange="{{ onLoginPasswordChange }}" type="password" placeholder="••••••••" style="{{ inputStyle }}">
+          </div>
+          <button onClick="{{ onSubmitLogin }}" style="{{ primaryButtonStyle }}">Masuk</button>
+        </div>
+        <div style="text-align:center; font-size:13px; color:oklch(0.58 0.01 264); margin-top:20px;">Belum punya akun? <a href="#" onClick="{{ onGoRegister }}">Daftar</a></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isRegister }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:400px; margin:0 auto; padding:60px 24px;">
+        <div style="text-align:center; margin-bottom:28px;">
+          <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:24px;">Daftar</div>
+          <div style="font-size:13px; color:oklch(0.58 0.01 264); margin-top:6px;">Akun baru dibuat dengan peran "user" secara default.</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div>
+            <div style="font-size:12px; font-weight:600; color:oklch(0.62 0.01 264); margin-bottom:6px;">Nama</div>
+            <input value="{{ registerName }}" onChange="{{ onRegisterNameChange }}" placeholder="Nama lengkap" style="{{ inputStyle }}">
+          </div>
+          <div>
+            <div style="font-size:12px; font-weight:600; color:oklch(0.62 0.01 264); margin-bottom:6px;">Email</div>
+            <input value="{{ registerEmail }}" onChange="{{ onRegisterEmailChange }}" type="email" placeholder="nama@instansi.id" style="{{ inputStyle }}">
+          </div>
+          <div>
+            <div style="font-size:12px; font-weight:600; color:oklch(0.62 0.01 264); margin-bottom:6px;">Kata Sandi</div>
+            <input value="{{ registerPassword }}" onChange="{{ onRegisterPasswordChange }}" type="password" placeholder="••••••••" style="{{ inputStyle }}">
+          </div>
+          <button onClick="{{ onSubmitRegister }}" style="{{ primaryButtonStyle }}">Daftar</button>
+        </div>
+        <div style="text-align:center; font-size:13px; color:oklch(0.58 0.01 264); margin-top:20px;">Sudah punya akun? <a href="#" onClick="{{ onGoLogin }}">Masuk</a></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex; height:100%; min-height:0;">
+        <div style="flex:none; width:260px; border-right:1px solid oklch(0.28 0.01 264); display:flex; flex-direction:column; padding:20px 14px; gap:4px; overflow-y:auto;">
+          <div style="display:flex; align-items:center; gap:8px; padding:8px 8px 16px;">
+            <span style="font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:oklch(0.5 0.01 264);">Pratinjau peran</span>
+          </div>
+          <div style="display:flex; gap:6px; padding:0 8px 16px;">
+            <sc-for list="{{ roleTabs }}" as="rt" hint-placeholder-count="2">
+              <button onClick="{{ rt.onClick }}" style="{{ rt.style }}">{{ rt.label }}</button>
+            </sc-for>
+          </div>
+          <sc-for list="{{ adminMenuItems }}" as="mi" hint-placeholder-count="3">
+            <a href="#" onClick="{{ mi.onClick }}" style="{{ mi.rowStyle }}">
+              <div style="flex:1; min-width:0;">
+                <div style="font-size:13px; font-weight:600;">{{ mi.label }}</div>
+              </div>
+              <sc-if value="{{ mi.isFuture }}" hint-placeholder-val="{{ false }}">
+                <div style="{{ futureBadgeStyle }}">Segera hadir</div>
+              </sc-if>
+            </a>
+          </sc-for>
+        </div>
+
+        <div style="flex:1; overflow-y:auto; min-height:0;">
+          <div style="max-width:920px; margin:0 auto; padding:28px 28px 80px;">
+
+            <sc-if value="{{ isPembukaanCuration }}" hint-placeholder-val="{{ true }}">
+              <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:22px; margin-bottom:4px;">Kurasi Halaman Pembukaan</div>
+              <div style="font-size:12px; color:oklch(0.55 0.13 145); font-weight:600; margin-bottom:20px;">● Berfungsi penuh — perubahan di sini nyata</div>
+
+              <div style="{{ layerCardStyle }}">
+                <div style="{{ layerTitleStyle }}">Tambah Entri Baru</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                  <input value="{{ newEntry.refA }}" onChange="{{ newEntry.onRefAChange }}" placeholder="Ref A, mis. 1:6-7" style="{{ inputStyle }}">
+                  <input value="{{ newEntry.refB }}" onChange="{{ newEntry.onRefBChange }}" placeholder="Ref B, mis. 4:69" style="{{ inputStyle }}">
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+                  <input value="{{ newEntry.captionA }}" onChange="{{ newEntry.onCaptionAChange }}" placeholder="Caption A" style="{{ inputStyle }}">
+                  <input value="{{ newEntry.captionB }}" onChange="{{ newEntry.onCaptionBChange }}" placeholder="Caption B" style="{{ inputStyle }}">
+                </div>
+                <button onClick="{{ newEntry.onSubmit }}" style="{{ secondaryButtonStyle }}">Simpan sebagai Draf</button>
+              </div>
+
+              <sc-for list="{{ curationEntries }}" as="en" hint-placeholder-count="3">
+                <div style="{{ layerCardStyle }}">
+                  <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:10px;">
+                    <div style="{{ en.statusStyle }}">{{ en.statusLabel }}</div>
+                    <div style="display:flex; gap:8px;">
+                      <sc-if value="{{ en.canReorder }}" hint-placeholder-val="{{ false }}">
+                        <button onClick="{{ en.onMoveUp }}" style="{{ iconBtnStyle }}">&uarr;</button>
+                        <button onClick="{{ en.onMoveDown }}" style="{{ iconBtnStyle }}">&darr;</button>
+                      </sc-if>
+                    </div>
+                  </div>
+                  <div style="font-size:14px; font-weight:600;">{{ en.refA }} &harr; {{ en.refB }}</div>
+                  <div style="font-size:13px; color:oklch(0.6 0.01 264); margin-top:6px; line-height:1.5;">{{ en.captionA }} — {{ en.captionB }}</div>
+                  <div style="display:flex; gap:8px; margin-top:14px;">
+                    <sc-if value="{{ en.canEdit }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ en.onEdit }}" style="{{ secondaryButtonStyle }}">Edit</button>
+                    </sc-if>
+                    <sc-if value="{{ en.canDelete }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ en.onDelete }}" style="{{ dangerButtonStyle }}">Hapus</button>
+                    </sc-if>
+                    <sc-if value="{{ en.canPromote }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ en.onPromote }}" style="{{ primaryButtonStyleSmall }}">Promosikan ke Tayang</button>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </sc-if>
+
+            <sc-if value="{{ isFutureSection }}" hint-placeholder-val="{{ false }}">
+              <div style="{{ layerCardStyle }}; text-align:center; padding:48px 24px;">
+                <div style="font-family:'Source Serif 4',serif; font-weight:600; font-size:18px; margin-bottom:8px;">{{ activeSectionLabel }}</div>
+                <div style="{{ futureBadgeStyle }}; display:inline-flex; margin-bottom:14px;">Segera hadir</div>
+                <div style="font-size:13px; color:oklch(0.58 0.01 264); line-height:1.6; max-width:420px; margin:0 auto;">Kerangka menu ini sudah disiapkan namun belum ada logikanya. Tidak ada data contoh yang ditampilkan di sini agar tidak disalahartikan sebagai fitur yang sudah berfungsi.</div>
+              </div>
+            </sc-if>
+
+          </div>
+        </div>
+      </div>
+    </sc-if>
 
     <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
       <div style="max-width:760px; margin:0 auto; padding:60px 24px;">
@@ -565,6 +704,21 @@ function verdictBadgeStyle(color) {
   return `display:inline-flex; align-items:center; padding:4px 10px 4px 9px; border-radius:4px; border-left:3px solid ${color}; background:oklch(0.24 0.008 264); font-size:11px; font-weight:600; color:oklch(0.88 0.006 264); letter-spacing:0.01em;`;
 }
 
+const CURATION_STATUS_META = {
+  LOCKED: { label:"TERKUNCI", color:"oklch(0.55 0.01 264)" },
+  DRAFT: { label:"DRAFT", color:"oklch(0.72 0.15 80)" },
+  LIVE: { label:"TAYANG", color:"oklch(0.65 0.15 145)" },
+};
+
+const ADMIN_MENU = [
+  { key:"pembukaan", label:"Kurasi Halaman Pembukaan", minRole:"curator" },
+  { key:"hyp-mod", label:"Moderasi Antrian Hipotesis", minRole:"curator", future:true },
+  { key:"user-mgmt", label:"Manajemen Pengguna & Peran", minRole:"admin", future:true },
+  { key:"ai-promote", label:"Promosi Analisis AI (Tier 2)", minRole:"admin", future:true },
+  { key:"corpus-promote", label:"Promosi Corpus Build", minRole:"admin", future:true },
+];
+const ROLE_RANK = { curator:1, admin:2 };
+
 class Component extends DCLogic {
   state = {
     route:"home", surahNumber:1, navOpen:false, isMobile:false,
@@ -572,6 +726,14 @@ class Component extends DCLogic {
     surahVisible:12, sidebarVisible:20, ayahVisible:4, tajwidOn:false, sidebarOpen:false,
     statVariant:"raw", selectedRootId:"rhm", selectedHypothesisId:"h1",
     selectedWordId:null, selectedWordText:null, currentAyahRef:"1:3",
+    loginEmail:"", loginPassword:"", registerName:"", registerEmail:"", registerPassword:"",
+    previewRole:"curator", adminSection:"pembukaan",
+    curationEntries: [
+      { id:1, status:"LOCKED", refA:"1:6-7", refB:"4:69", captionA:"Jalan yang lurus diminta secara umum.", captionB:"Dijelaskan konkret: jalan para nabi, orang jujur, syuhada, orang saleh." },
+      { id:2, status:"LIVE", refA:"2:2-5", refB:"23:1-11", captionA:"Ciri orang beruntung disebut ringkas.", captionB:"Ciri yang sama dijelaskan lebih rinci." },
+      { id:3, status:"DRAFT", refA:"16:89", refB:"6:38", captionA:"Al-Qur'an menjelaskan segala sesuatu.", captionB:"Contoh cakupan: tak ada yang terlewat dalam catatan (kitab)." },
+    ],
+    newEntryRefA:"", newEntryRefB:"", newEntryCaptionA:"", newEntryCaptionB:"", nextEntryId:4,
   };
 
   componentDidMount() {
@@ -731,12 +893,90 @@ class Component extends DCLogic {
     const layerTitleStyle = "font-family:'Source Serif 4',serif; font-weight:600; font-size:15px; margin-bottom:12px; color:oklch(0.8 0.01 264);";
     const disclaimerStyle = "font-size:11px; color:oklch(0.55 0.01 264); margin-top:10px; font-style:italic;";
 
+    const isAuthArea = route==="login" || route==="register" || route==="admin";
+    const inputStyle = "width:100%; background:oklch(0.22 0.008 264); border:1px solid oklch(0.32 0.01 264); border-radius:8px; padding:10px 14px; font-size:14px; color:oklch(0.94 0.004 264); font-family:Inter,sans-serif;";
+    const primaryButtonStyle = "padding:11px; border-radius:8px; border:1px solid oklch(0.55 0.13 275); background:oklch(0.55 0.13 275); color:oklch(0.98 0.01 275); font-size:14px; font-weight:600; font-family:Inter,sans-serif; cursor:pointer;";
+    const primaryButtonStyleSmall = "padding:7px 16px; border-radius:8px; border:1px solid oklch(0.55 0.13 275); background:oklch(0.55 0.13 275); color:oklch(0.98 0.01 275); font-size:12px; font-weight:600; font-family:Inter,sans-serif; cursor:pointer;";
+    const secondaryButtonStyle = "padding:7px 16px; border-radius:8px; border:1px solid oklch(0.34 0.01 264); background:oklch(0.24 0.008 264); color:oklch(0.85 0.01 264); font-size:12px; font-weight:600; font-family:Inter,sans-serif; cursor:pointer;";
+    const dangerButtonStyle = "padding:7px 16px; border-radius:8px; border:1px solid oklch(0.5 0.15 25); background:transparent; color:oklch(0.68 0.16 25); font-size:12px; font-weight:600; font-family:Inter,sans-serif; cursor:pointer;";
+    const iconBtnStyle = "width:26px; height:26px; border-radius:6px; border:1px solid oklch(0.34 0.01 264); background:oklch(0.24 0.008 264); color:oklch(0.7 0.01 264); font-size:12px; cursor:pointer;";
+    const futureBadgeStyle = "display:inline-flex; align-items:center; padding:3px 10px; border-radius:999px; background:oklch(0.4 0.02 264 / 0.3); font-size:10px; font-weight:600; color:oklch(0.62 0.01 264); letter-spacing:0.03em; text-transform:uppercase;";
+
+    const roleRank = ROLE_RANK[this.state.previewRole];
+    const adminMenuItems = ADMIN_MENU.filter(mi => ROLE_RANK[mi.minRole] <= roleRank).map(mi => ({
+      label: mi.label, isFuture: !!mi.future,
+      onClick: () => this.setState({ adminSection: mi.key }),
+      rowStyle: `display:flex; align-items:center; gap:8px; padding:10px 8px; border-radius:8px; text-decoration:none; color:inherit; background:${this.state.adminSection===mi.key ? "oklch(0.28 0.09 275 / 0.28)" : "transparent"};`,
+    }));
+    const roleTabs = ["curator","admin"].map(r => ({
+      label: r==="curator" ? "Kurator" : "Admin",
+      onClick: () => this.setState({ previewRole:r }),
+      style: `flex:1; padding:6px; border-radius:6px; border:1px solid ${this.state.previewRole===r ? "oklch(0.55 0.13 275)" : "oklch(0.32 0.01 264)"}; background:${this.state.previewRole===r ? "oklch(0.28 0.09 275 / 0.28)" : "transparent"}; color:${this.state.previewRole===r ? "oklch(0.9 0.01 275)" : "oklch(0.6 0.01 264)"}; font-size:11px; font-weight:600; font-family:Inter,sans-serif; cursor:pointer;`,
+    }));
+    const activeMenuMeta = ADMIN_MENU.find(mi => mi.key === this.state.adminSection) || ADMIN_MENU[0];
+
+    const curationEntries = this.state.curationEntries.map((en, idx, arr) => {
+      const meta = CURATION_STATUS_META[en.status];
+      const locked = en.status === "LOCKED";
+      const isTier1 = locked || en.status === "LIVE";
+      return {
+        ...en,
+        statusLabel: meta.label,
+        statusStyle: isTier1
+          ? `display:inline-flex; align-items:center; padding:4px 10px 4px 9px; border-radius:4px; border-left:3px solid ${meta.color}; background:oklch(0.24 0.008 264); font-size:11px; font-weight:600; color:oklch(0.88 0.006 264); letter-spacing:0.01em;`
+          : `display:inline-flex; align-items:center; padding:4px 12px; border-radius:999px; background:${meta.color} / 0.16; color:${meta.color}; font-size:11px; font-weight:600;`,
+        canEdit: en.status === "DRAFT",
+        canDelete: en.status === "DRAFT" || en.status === "LIVE",
+        canPromote: en.status === "DRAFT",
+        canReorder: en.status !== "LOCKED",
+        onEdit: () => {},
+        onDelete: () => this.setState(s => ({ curationEntries: s.curationEntries.filter(x => x.id !== en.id) })),
+        onPromote: () => this.setState(s => ({ curationEntries: s.curationEntries.map(x => x.id===en.id ? {...x, status:"LIVE"} : x) })),
+        onMoveUp: idx > 0 ? (() => this.setState(s => { const a=[...s.curationEntries]; [a[idx-1],a[idx]]=[a[idx],a[idx-1]]; return {curationEntries:a}; })) : (() => {}),
+        onMoveDown: idx < arr.length-1 ? (() => this.setState(s => { const a=[...s.curationEntries]; [a[idx+1],a[idx]]=[a[idx],a[idx+1]]; return {curationEntries:a}; })) : (() => {}),
+      };
+    });
+
+    const newEntry = {
+      refA: this.state.newEntryRefA, refB: this.state.newEntryRefB,
+      captionA: this.state.newEntryCaptionA, captionB: this.state.newEntryCaptionB,
+      onRefAChange: e => this.setState({ newEntryRefA: e.target.value }),
+      onRefBChange: e => this.setState({ newEntryRefB: e.target.value }),
+      onCaptionAChange: e => this.setState({ newEntryCaptionA: e.target.value }),
+      onCaptionBChange: e => this.setState({ newEntryCaptionB: e.target.value }),
+      onSubmit: () => {
+        if (!this.state.newEntryRefA || !this.state.newEntryRefB) return;
+        this.setState(s => ({
+          curationEntries: [...s.curationEntries, { id:s.nextEntryId, status:"DRAFT", refA:s.newEntryRefA, refB:s.newEntryRefB, captionA:s.newEntryCaptionA, captionB:s.newEntryCaptionB }],
+          nextEntryId: s.nextEntryId+1, newEntryRefA:"", newEntryRefB:"", newEntryCaptionA:"", newEntryCaptionB:"",
+        }));
+      },
+    };
+
     return {
       isHome: route==="home", isSearch: route==="search", isSurahIndex: route==="surah-index",
       isSurah: route==="surah", isAyat: route==="ayat", isRootIndex: route==="root-index",
       isRootDetail: route==="root-detail", isMethodology: route==="methodology",
       isHypothesisIndex: route==="hypothesis-index", isHypothesisDetail: route==="hypothesis-detail",
       isPembukaan: route==="pembukaan",
+      isPublicArea: !isAuthArea, isAuthArea,
+      isLogin: route==="login", isRegister: route==="register", isAdmin: route==="admin",
+      authAreaLabel: "Kurator/Admin",
+      onGoAuthArea: () => this.go("login"),
+      onGoRegister: () => this.go("register"), onGoLogin: () => this.go("login"),
+      loginEmail: this.state.loginEmail, onLoginEmailChange: e => this.setState({ loginEmail: e.target.value }),
+      loginPassword: this.state.loginPassword, onLoginPasswordChange: e => this.setState({ loginPassword: e.target.value }),
+      onSubmitLogin: () => this.go("admin"),
+      registerName: this.state.registerName, onRegisterNameChange: e => this.setState({ registerName: e.target.value }),
+      registerEmail: this.state.registerEmail, onRegisterEmailChange: e => this.setState({ registerEmail: e.target.value }),
+      registerPassword: this.state.registerPassword, onRegisterPasswordChange: e => this.setState({ registerPassword: e.target.value }),
+      onSubmitRegister: () => this.go("login"),
+      inputStyle, primaryButtonStyle, primaryButtonStyleSmall, secondaryButtonStyle, dangerButtonStyle, iconBtnStyle, futureBadgeStyle,
+      roleTabs, adminMenuItems,
+      isPembukaanCuration: this.state.adminSection === "pembukaan",
+      isFutureSection: !!activeMenuMeta.future,
+      activeSectionLabel: activeMenuMeta.label,
+      curationEntries, newEntry,
       pembukaanExamples: [
         { title:"Contoh 1", refA:"QS 1:6-7 (Al-Fatihah)", captionA:"\"Jalan yang lurus\" diminta secara umum.", refB:"QS 4:69 (An-Nisa)", captionB:"Dijelaskan konkret: jalan para nabi, orang jujur, syuhada, dan orang saleh." },
         { title:"Contoh 2", refA:"QS 2:2-5 (Al-Baqarah)", captionA:"Ciri \"orang yang beruntung\" disebut ringkas.", refB:"QS 23:1-11 (Al-Mu'minun)", captionB:"Ciri yang sama dijelaskan lebih rinci." },
