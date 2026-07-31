@@ -4,6 +4,7 @@ use App\Http\Controllers\Qse\AnalysisGenerationController;
 use App\Http\Controllers\Qse\AyahController;
 use App\Http\Controllers\Qse\HypothesisController;
 use App\Http\Controllers\Qse\PageController;
+use App\Http\Controllers\Qse\PembukaanCurationController;
 use App\Http\Controllers\Qse\RootController;
 use App\Http\Controllers\Qse\SearchController;
 use App\Http\Controllers\Qse\SurahController;
@@ -69,7 +70,15 @@ Route::prefix('qse/api')->name('qse.api.')->group(function () {
     });
 });
 
-Route::prefix('qse/curator')->middleware(['auth', 'qse.role:curator'])->group(function () {
+Route::prefix('qse/curator')->name('qse.curator.')->middleware(['auth', 'qse.role:curator'])->group(function () {
     Route::post('/generate/{hypothesis}', [AnalysisGenerationController::class, 'generate'])
-        ->name('qse.curator.generate');
+        ->name('generate');
+
+    // SPEC-ADMIN-01 §2 — kurasi halaman Pembukaan (model "terkunci + terkurasi").
+    Route::get('/pembukaan',                        [PembukaanCurationController::class, 'index'])->name('pembukaan.index');
+    Route::post('/pembukaan',                       [PembukaanCurationController::class, 'store'])->name('pembukaan.store');
+    Route::put('/pembukaan/{pembukaanExample}',      [PembukaanCurationController::class, 'update'])->name('pembukaan.update');
+    Route::delete('/pembukaan/{pembukaanExample}',   [PembukaanCurationController::class, 'destroy'])->name('pembukaan.destroy');
+    Route::post('/pembukaan/{pembukaanExample}/promote', [PembukaanCurationController::class, 'promote'])->name('pembukaan.promote');
+    Route::post('/pembukaan/reorder',                [PembukaanCurationController::class, 'reorder'])->name('pembukaan.reorder');
 });

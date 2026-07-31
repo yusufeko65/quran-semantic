@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Qse;
 use App\Http\Controllers\Controller;
 use App\Models\Ayah;
 use App\Models\Hypothesis;
+use App\Models\PembukaanExample;
 use App\Models\Surah;
 use App\Models\Translation;
 use App\Models\WordGloss;
@@ -43,10 +44,14 @@ class PageController extends Controller
 
     /**
      * Halaman "Pembukaan" — prinsip tafsir al-Qur'an bil-Qur'an, lewat
-     * ayat premis (16:89) + dua contoh pasangan ayat-ke-ayat nyata dari
-     * ADENDUM-Tier-Pembukaan-SampelKedua.md (disetujui PM). Caption di
-     * bawah adalah teks PM apa adanya — bukan interpretasi buatan sendiri
-     * (§19 tetap berlaku untuk peninjauan final, dicatat di view).
+     * ayat premis (16:89, tetap hardcoded — bukan bagian entri kurasi,
+     * lihat SPEC-ADMIN-01 §2) + contoh pasangan ayat-ke-ayat dari tabel
+     * `pembukaan_examples` (SPEC-ADMIN-01 §2 — model "terkunci +
+     * terkurasi"). Hanya entri `is_current=true` yang tampil di sini;
+     * entri terkunci selalu di awal, entri kurasi mengikuti `sort_order`.
+     * Teks Arab & terjemahan SELALU ditarik ulang dari `ayahs`/
+     * `translations` (bukan disalin ke tabel ini) — satu sumber
+     * kebenaran (K13).
      */
     public function pembukaan()
     {
@@ -68,28 +73,35 @@ class PageController extends Controller
                 });
         };
 
+        $examples = PembukaanExample::query()
+            ->where('is_current', true)
+            ->orderByDesc('is_locked')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->values()
+            ->map(function (PembukaanExample $ex, int $i) use ($fetchAyahs) {
+                [$surahA, $numbersA] = PembukaanExample::parseRef($ex->ref_a);
+                [$surahB, $numbersB] = PembukaanExample::parseRef($ex->ref_b);
+                $ayahsA = $fetchAyahs($surahA, $numbersA);
+                $ayahsB = $fetchAyahs($surahB, $numbersB);
+                $nameA = optional(optional($ayahsA->first())->surah)->transliteration;
+                $nameB = optional(optional($ayahsB->first())->surah)->transliteration;
+
+                return [
+                    'title'    => 'Contoh ' . ($i + 1),
+                    'refA'     => "QS {$ex->ref_a}" . ($nameA ? " ({$nameA})" : ''),
+                    'ayahsA'   => $ayahsA,
+                    'captionA' => $ex->caption_a,
+                    'refB'     => "QS {$ex->ref_b}" . ($nameB ? " ({$nameB})" : ''),
+                    'ayahsB'   => $ayahsB,
+                    'captionB' => $ex->caption_b,
+                ];
+            });
+
         return view('qse.pembukaan', [
             'premise' => $fetchAyahs(16, [89])->first(),
-            'examples' => [
-                [
-                    'title'    => 'Contoh 1',
-                    'refA'     => "QS 1:6-7 (Al-Fatihah)",
-                    'ayahsA'   => $fetchAyahs(1, [6, 7]),
-                    'captionA' => '"Jalan yang lurus" diminta secara umum.',
-                    'refB'     => "QS 4:69 (An-Nisa)",
-                    'ayahsB'   => $fetchAyahs(4, [69]),
-                    'captionB' => 'Dijelaskan konkret: jalan para nabi, orang jujur, syuhada, dan orang saleh.',
-                ],
-                [
-                    'title'    => 'Contoh 2',
-                    'refA'     => "QS 2:2-5 (Al-Baqarah)",
-                    'ayahsA'   => $fetchAyahs(2, [2, 3, 4, 5]),
-                    'captionA' => 'Ciri "orang yang beruntung" disebut ringkas.',
-                    'refB'     => "QS 23:1-11 (Al-Mu'minun)",
-                    'ayahsB'   => $fetchAyahs(23, range(1, 11)),
-                    'captionB' => 'Ciri yang sama dijelaskan lebih rinci.',
-                ],
-            ],
+            'examples' => $examples,
         ]);
     }
 
